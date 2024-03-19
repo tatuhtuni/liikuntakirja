@@ -1,0 +1,407 @@
+#+PROPERTY:header-args :mkdirp yes
+
+* Developer's prologue
+** Install prerequisites and nix
+
+#+begin_src
+  sudo dnf install git curl make direnv
+#+end_src
+
+#+begin_src shell :results silent
+  curl -L https://nixos.org/nix/install | sh
+#+end_src
+
+Shell environment has to be reloaded now. Restart Emacs and the shell session it's running in.
+
+** Setup notebook environment
+
+The following can be executed for a temporary session environment for this notebook. The contents are largely converted from my own =init.el=, from using =customize=-interface to using =setq=.
+
+#+begin_src elisp
+  ;; First, we wrap the whole init file in a block that sets file-name-handler-alist to nil to prevent any special-filename parsing of files loaded from the init file (e.g. remote files loaded through tramp, etc.).
+  ;; Then we set gc-cons-threshold to its maximum value, to prevent any garbage collection from happening during load time.
+  (let ((file-name-handler-alist nil))
+    (setq gc-cons-threshold most-positive-fixnum)
+
+  ;; Asynchronous native compilation
+  (when (fboundp 'native-compile-async)
+    (setq comp-deferred-compilation t
+          comp-deferred-compilation-black-list '("/mu4e.*\\.el$")))
+
+  ;; Don't confirm killing processes on exit
+  (setq confirm-kill-processes nil)
+
+  ;; Set UTF-8 as default encoding
+  (set-language-environment "UTF-8")
+  (prefer-coding-system       'utf-8)
+  (set-default-coding-systems 'utf-8)
+  (set-terminal-coding-system 'utf-8)
+  (set-keyboard-coding-system 'utf-8)
+  (setq default-buffer-file-coding-system 'utf-8)
+
+  ;; Ctrl-K at start of line also removes newline
+  (setq kill-whole-line t))
+
+  ;; No hard tabs, set indentations for major langs
+  (setq indent-tabs-mode nil)
+  (setq tab-width 4)
+  (setq js-indent-level 2)
+  (setq css-indent-level 2)
+
+  ;; Highlight parentheses
+  (setq show-paren-delay 0)
+  (show-paren-mode)
+
+  ;; Initialize package system. Add MELPA.
+  (setq package-archives
+        '(("melpa"     . "https://melpa.org/packages/")
+          ("elpa"      . "https://elpa.gnu.org/packages/")))
+  (package-initialize)
+  (when (not package-archive-contents)
+    (package-refresh-contents))
+
+  ;; By default, always try to install missing packages, always defer loading until actually needed, disable verbose loading (enable for debugging).
+  (when (not (package-installed-p 'use-package))
+    (package-install 'use-package))
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+  (setq use-package-always-defer t)
+  (setq use-package-verbose nil)
+
+  ;; Org-mode
+  (use-package org
+    :load-path ("lisp/org-mode/lisp" "lisp/org-mode/lisp/contrib/lisp")
+    :bind
+    (:map org-mode-map
+     ("C-c l" . org-store-link))
+    :custom
+    (org-directory "~/Documents/org.d")
+    (org-log-done t)
+    (org-startup-indented t)
+    (org-log-into-drawer t)
+    (org-src-fontify-natively t)
+    (org-return-follows-link t)
+    (org-special-ctrl-a/e t)
+    (org-special-ctrl-k t)
+    (org-use-speed-commands
+     (lambda ()
+       (and (looking-at org-outline-regexp)
+            (looking-back "^\**"))))
+    :custom-face
+
+    :hook
+    (org-babel-after-execute . org-redisplay-inline-images)
+    :config
+    )
+
+  ;; Haskell language & direnv support
+  (use-package haskell-mode
+    :ensure t)
+  (use-package envrc
+    :config
+    (envrc-global-mode +1))
+  (use-package eglot
+    :config
+    (add-hook 'haskell-mode-hook #'eglot-ensure)
+    ;; Optionally add keybindings to some common functions:
+    :bind ((:map eglot-mode-map
+                 ("C-c C-e r" . eglot-rename)
+                 ("C-c C-e l" . flymake-show-buffer-diagnostics)
+                 ("C-c C-e p" . flymake-show-project-diagnostics)
+                 ("C-c C-e C" . eglot-show-workspace-configuration)
+                 ("C-c C-e R" . eglot-reconnect)
+                 ("C-c C-e S" . eglot-shutdown)
+                 ("C-c C-e A" . eglot-shutdown-all)
+                 ("C-c C-e a" . eglot-code-actions)
+                 ("C-c C-e f" . eglot-format))))
+
+  ;; Allow in-place language execution for Latex, Python, Haskell, and shell languages.
+  (add-hook 'org-mode-hook
+            (lambda () (add-hook 'after-save-hook #'org-babel-tangle
+                            :append :local)))
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((shell   . t)
+     (haskell . t)))
+  (setq haskell-process-type 'ghci)
+
+  (use-package org-indent
+    :ensure nil
+    :diminish)
+
+  ;; Hide emphasis markers
+  (setq org-hide-emphasis-markers t)
+
+  ;; Font-lock substitution for list markers
+  (font-lock-add-keywords 'org-mode
+                          '(("^ *\\([-]\\) "
+                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+
+  ;; org-bullets
+  (use-package org-bullets
+    :ensure t
+    :config
+    (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+
+  ;; Save place of cursor on exit
+  (use-package saveplace
+    :defer nil
+    :config
+    (save-place-mode))
+
+  ;; Mode-specific bookmarks
+  ;; `M-i` to jump in eg. org-mode to select heading in a list of headings.
+  (use-package imenu-anywhere
+    :bind
+    ("M-i" . helm-imenu-anywhere))
+
+  ;; Smooth scrolling
+  (use-package smooth-scrolling
+    :ensure t
+    :config
+    (smooth-scrolling-mode 1))
+
+  ;; Enable pixel scrolling to avoid jumping blocks when scrolling
+  (pixel-scroll-precision-mode)
+  (setq pixel-scroll-precision-large-scroll-height 40.0)
+
+  ;; Delete trailing whitespace on exit
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+  ;; Save on unfocus
+  (defun save-all ()
+    (interactive)
+    (save-some-buffers t))
+  (add-hook 'focus-out-hook 'save-all)
+
+  ;; IDO for flex matching filenames and probably something else too
+  (use-package ido
+    :ensure t)
+  (setq ido-enable-flex-matching t)
+  (setq ido-everywhere t)
+  (ido-mode 1)
+
+  ;; IDO-based M-x, bases guesses on current active mode
+  (use-package smex
+    :ensure t)
+  (smex-initialize)
+  (global-set-key (kbd "M-x") 'smex)
+  (global-set-key (kbd "M-X") 'smex-major-mode-commands)
+  (global-set-key (kbd "C-c C-c M-x") 'execute-extended-command)
+
+  ;; `which-key`
+  (use-package which-key
+    :defer nil
+    :diminish which-key-mode
+    :config
+    (which-key-mode))
+
+  ;; Scrollbar & toolbar modes off
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+
+  ;; Use `bind-key` instead of `global-set-key` to allow `M-x describe-personal-keybindings`.
+  (require 'bind-key)
+
+  ;; Go to line
+  (bind-key "M-g" 'goto-line)
+
+  ;; When using IDO (I think it's IDO), spaces try to auto-complete, making spaces in node names impossible. =Override IDO space matching to allow spaces in node names.=
+  (define-key minibuffer-local-completion-map (kbd "SPC") 'self-insert-command)
+
+  ;; miscellaneous
+  (use-package poet-theme
+    :ensure t)
+  (load-theme 'poet t)
+  (use-package wc-mode
+    :ensure t)
+  (add-hook 'text-mode-hook
+            (lambda ()
+              (wc-mode 1)))
+  (display-battery-mode t)
+  (setq sentence-end-double-space nil)
+
+  ;; playground
+  (use-package magit
+    :ensure t)
+  (setq magit-define-global-key-bindings 'recommended)
+
+  (define-derived-mode th-mode
+    clean-mode "TH"
+    "Major mode for haskell-mode breaking Template Haskell / HSX."
+    (setq-local comment-start "--"))
+
+  (use-package lsp-mode
+    :ensure t)
+
+  ;; Optional: Show/pick completions on tab, sane max height:
+  (setq tab-always-indent 'complete
+        completions-max-height 20
+        completion-auto-select 'second-tab)
+
+  ;; Startup has finished. Revert performance optimizations.
+  (setq gc-cons-threshold (* 2 1000 1000))
+  )
+#+end_src
+
+#+RESULTS:
+: 2000000
+
+Result should be 2000000 if the script was run successfully.
+
+Here are some further beautification and autosaves using the customize-interface and will mess with your own customizations permanently if any. We'll first also create an autosaves folder.
+#+begin_src shell :results silent
+  mkdir ~/.emacs.d/autosaves
+#+end_src
+
+#+begin_src elisp
+  ;; Autosave and backup directories
+  (custom-set-variables
+   '(auto-save-file-name-transforms
+     '((".*" "~/.emacs.d/autosaves/\\1" t)))
+   '(backup-directory-alist
+     '((".*" . "~/.emacs.d/backups/"))))
+
+  ;; Headline fonts
+  (when window-system
+    (let* ((variable-tuple
+	      (cond ((x-list-fonts "IBM Plex Serif")  '(:font "IBM Plex Serif"))
+		    ((x-family-fonts "Sans Serif")    '(:family "Sans Serif"))
+		    (nil (warn "Cannot find a Sans Serif Font.  Install IBM Plex Serif."))))
+	     (base-font-color     (face-foreground 'default nil 'default))
+	     (headline           `(:inherit default :weight bold :foreground ,base-font-color)))
+
+	(custom-theme-set-faces
+	 'user
+	 `(org-level-8 ((t (,@headline ,@variable-tuple))))
+	 `(org-level-7 ((t (,@headline ,@variable-tuple))))
+	 `(org-level-6 ((t (,@headline ,@variable-tuple))))
+	 `(org-level-5 ((t (,@headline ,@variable-tuple))))
+	 `(org-level-4 ((t (,@headline ,@variable-tuple :height 1.1))))
+	 `(org-level-3 ((t (,@headline ,@variable-tuple :height 1.25))))
+	 `(org-level-2 ((t (,@headline ,@variable-tuple :height 1.5))))
+	 `(org-level-1 ((t (,@headline ,@variable-tuple :height 1.75))))
+	 `(org-document-title ((t (,@headline ,@variable-tuple :height 2.0 :underline nil))))))
+    )
+
+  ;; Variable pitch fonts, mode hook, visual line mode, custom fixed pitch faces
+  (custom-theme-set-faces
+    'user
+    '(variable-pitch ((t (:family "IBM Plex Serif" :height 100))))
+    '(fixed-pitch ((t (:family "Fantasque Sans Mono")))))
+  (add-hook 'org-mode-hook 'variable-pitch-mode)
+  (add-hook 'org-mode-hook 'visual-line-mode)
+  (custom-theme-set-faces
+    'user
+    '(org-block ((t (:inherit fixed-pitch))))
+    '(org-code ((t (:inherit (shadow fixed-pitch)))))
+    '(org-document-info ((t (:foreground "dark orange"))))
+    '(org-document-info-keyword ((t (:inherit (shadow fixed-pitch)))))
+    '(org-indent ((t (:inherit (org-hide fixed-pitch)))))
+    '(org-link ((t (:foreground "royal blue" :underline t))))
+    '(org-meta-line ((t (:inherit (font-lock-comment-face fixed-pitch)))))
+    '(org-property-value ((t (:inherit fixed-pitch))) t)
+    '(org-special-keyword ((t (:inherit (font-lock-comment-face fixed-pitch)))))
+    '(org-table ((t (:inherit fixed-pitch :foreground "#83a598"))))
+    '(org-tag ((t (:inherit (shadow fixed-pitch) :weight bold :height 0.8))))
+    '(org-verbatim ((t (:inherit (shadow fixed-pitch))))))
+
+#+end_src
+
+#+RESULTS:
+
+
+** Setup IHP and the initial project
+[a short introduction into what IHP does and what is it's working ethos.]
+
+#+begin_src shell :results silent
+  nix-env --install ihp-new
+#+end_src
+
+Setting an IHP project up for the first time can take a long time, is verbose, and asks if precompiled binaries can be used. Thus, it is preferable to run it in a separate terminal. However the following block, which uses precompiled binaries, will work too:
+#+begin_src shell :results silent
+  yes | ihp-new liikuntakirja
+#+end_src
+If you have set up an IHP project before, running the following is fine:
+#+begin_src shell :results silent
+  ihp-new liikuntakirja
+#+end_src
+
+With the project set up, this document should be tangled with =C-c C-v t=. If editing the code, automatic tangling of this document should be enabled for smoother sailing. First install =org-auto-tangle= from outside the package management.
+#+begin_src shell :results silent
+  mkdir ~/.emacs.d/nonmanaged
+  git clone https://github.com/yilkalargaw/org-auto-tangle.git ~/.emacs.d/nonmanaged/org-auto-tangle
+#+end_src
+
+#+begin_src elisp
+(use-package async
+  :defer t)
+(use-package org-auto-tangle
+  :load-path "nonmanaged/org-auto-tangle/"
+  :defer t
+  :hook (org-mode . org-auto-tangle-mode))
+#+end_src
+
+** Project configuration
+
+To get =ghci= session working with =ob-haskell= for executing Haskell blocks, we have to amend the default =.ghci= file with the proper prompt (=ghci>= instead of =IHP>=).
+#+begin_src haskell :tangle liikuntakirja/.ghci
+  :set -XNoImplicitPrelude
+  :def loadFromIHP \file -> (System.Environment.getEnv "IHP_LIB") >>= (\ihpLib -> readFile (ihpLib <> "/" <> file))
+  :loadFromIHP applicationGhciConfig
+  import IHP.Prelude
+  :set prompt "ghci> "
+#+end_src
+
+Then we'll have the =nix= boilerplate.
+#+begin_src nix :tangle liikuntakirja/Config/nix/nixpkgs-config.nix
+{ ihp, additionalNixpkgsOptions, ... }:
+import "${toString ihp}/NixSupport/make-nixpkgs-from-options.nix" {
+    ihp = ihp;
+    haskellPackagesDir = ./haskell-packages/.;
+    additionalNixpkgsOptions = additionalNixpkgsOptions;
+}
+#+end_src
+
+And the global flags boilerplate. This may be integrated into the story, if e.g API keys are needed for some functionality.
+#+begin_src haskell :tangle liikuntakirja/Config/Config.hs
+  module Config where
+
+  import IHP.Prelude
+  import IHP.Environment
+  import IHP.FrameworkConfig
+
+  config :: ConfigBuilder
+  config = do
+      pure ()
+#+end_src
+
+Everything should now be set for both running the program and the untangled blocks of code in this notebook. The following block can be used to test if the environment is set up properly.
+#+begin_src haskell :dir ./liikuntakirja
+  :t config
+#+end_src
+
+#+RESULTS:
+: config :: ConfigBuilder
+
+** Running the program
+
+#+begin_src shell :async yes :session *ihp* :dir ./liikuntakirja :results silent
+  ./start
+#+end_src
+
+* The Liikuntakirja story
+#+PROPERTY:header-args :dir ./liikuntakirja
+#+begin_src haskell
+  :t config
+#+end_src
+
+Liikuntakirja is a story of a person wanting to upload, view, edit, and delete their workout sessions originally recorded on a smartwatch. The universal fitness trackers found on market  are too complex to use and make compromises to cover all bases. These don't cater to tracking the user's workout sessions in a minimalistic way. The smartwatch data is  TCX-formatted, ready for uploading into the system.
+
+#+begin_src haskell :tangle tcxTest.hs
+  import System.IO
+
+  main = interact TCXtoRecord
+
+  TCXtoRecord = show . lines
+#+end_src
