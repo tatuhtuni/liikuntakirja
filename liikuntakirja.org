@@ -392,16 +392,40 @@ Everything should now be set for both running the program and the untangled bloc
 
 * The Liikuntakirja story
 #+PROPERTY:header-args :dir ./liikuntakirja
+
 #+begin_src haskell
   :t config
 #+end_src
 
-Liikuntakirja is a story of a person wanting to upload, view, edit, and delete their workout sessions originally recorded on a smartwatch. The universal fitness trackers found on market  are too complex to use and make compromises to cover all bases. These don't cater to tracking the user's workout sessions in a minimalistic way. The smartwatch data is  TCX-formatted, ready for uploading into the system.
-
-#+begin_src haskell :tangle tcxTest.hs
-  import System.IO
-
-  main = interact TCXtoRecord
-
-  TCXtoRecord = show . lines
+#+NAME: test noweb
+#+begin_src haskell
+  pure ()
 #+end_src
+
+#+begin_src haskell :noweb yes
+  config = do
+    <<test noweb>>
+#+end_src
+
+Liikuntakirja is a story of a person wanting to upload, view, edit, and delete their workout sessions originally recorded on a smartwatch. The universal fitness trackers found on market  are too complex to use and make compromises to cover all bases. These don't cater to tracking the user's workout sessions in a minimalistic way.
+
+The user is happy with a unified interface. A workout session can be selected from a drop-down menu and a new one can be uploaded by browsing their computer. At the same time the data from either the newest upload or the one specially selected from the drop-down is shown.
+
+
+
+The smartwatch data is  TCX-formatted, ready for uploading into the system. Since the data is essential to modelling the business logic in this program, we'll start off with its upload and conversion logic.
+
+** Loading smartwatch data into Liikuntakirja
+
+*** Upload
+
+*** Conversion
+The relevant fields we expect to receive in regular use are defined by the following type structure:
+#+begin_src
+#+end_src
+
+The TCX file is an XML formatted file and since there are no libraries available for directly handling the format, we'll construct a filter chain using the Haskell XML Toolkit. First we'll  filter out all irrelevant nodes. This could be composed into the later stages, but we want to keep each stage of the conversion simple, as it carries no tangible performance penalty.
+#+begin_src
+#+end_src
+
+*** Database
