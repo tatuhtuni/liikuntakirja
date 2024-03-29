@@ -1,33 +1,25 @@
-#+PROPERTY:header-args :mkdirp yes
+#+PROPERTY:header-args :mkdirp yes :exports code :noweb no-export
+#+OPTIONS: broken-links:t
 
 * Developer's prologue
 ** Install prerequisites and nix
-
-#+begin_src
+The program is run in a Nix reproducible environment to ease setup and deployment. The environment depends on Git, Curl, Make, and Direnv.
+#+caption: An example shell command for Dnf package manager with Fedora repositories.
+#+begin_src shell
   sudo dnf install git curl make direnv
 #+end_src
 
+#+caption: Nix install script
 #+begin_src shell :results silent :dir .
   curl -L https://nixos.org/nix/install | sh
 #+end_src
 
-Shell environment has to be reloaded now. Restart Emacs and the shell session it's running in.
+After running the install script, shell environment has to be reloaded. Restart Emacs and the shell session it's running in.
 
 ** Setup notebook environment
-
 The following can be executed for a temporary session environment for this notebook. The contents are largely converted from my own =init.el=, from using =customize=-interface to using =setq=.
 
 #+begin_src elisp
-  ;; First, we wrap the whole init file in a block that sets file-name-handler-alist to nil to prevent any special-filename parsing of files loaded from the init file (e.g. remote files loaded through tramp, etc.).
-  ;; Then we set gc-cons-threshold to its maximum value, to prevent any garbage collection from happening during load time.
-  (let ((file-name-handler-alist nil))
-    (setq gc-cons-threshold most-positive-fixnum)
-
-  ;; Asynchronous native compilation
-  (when (fboundp 'native-compile-async)
-    (setq comp-deferred-compilation t
-          comp-deferred-compilation-black-list '("/mu4e.*\\.el$")))
-
   ;; Don't confirm killing processes on exit
   (setq confirm-kill-processes nil)
 
@@ -39,18 +31,11 @@ The following can be executed for a temporary session environment for this noteb
   (set-keyboard-coding-system 'utf-8)
   (setq default-buffer-file-coding-system 'utf-8)
 
-  ;; Ctrl-K at start of line also removes newline
-  (setq kill-whole-line t)
-
   ;; No hard tabs, set indentations for major langs
   (setq indent-tabs-mode nil)
   (setq tab-width 4)
   (setq js-indent-level 2)
   (setq css-indent-level 2)
-
-  ;; Highlight parentheses
-  (setq show-paren-delay 0)
-  (show-paren-mode)
 
   ;; Initialize package system. Add MELPA.
   (setq package-archives
@@ -71,29 +56,14 @@ The following can be executed for a temporary session environment for this noteb
   ;; Org-mode
   (use-package org
     :load-path ("lisp/org-mode/lisp" "lisp/org-mode/lisp/contrib/lisp")
-    :bind
-    (:map org-mode-map
-     ("C-c l" . org-store-link))
-    :custom
-    (org-directory "~/Documents/org.d")
-    (org-log-done t)
-    (org-startup-indented t)
-    (org-log-into-drawer t)
-    (org-src-fontify-natively t)
-    (org-return-follows-link t)
-    (org-special-ctrl-a/e t)
-    (org-special-ctrl-k t)
-    (org-use-speed-commands
-     (lambda ()
-       (and (looking-at org-outline-regexp)
-            (looking-back "^\**"))))
-    :custom-face
-
     :hook
     (org-babel-after-execute . org-redisplay-inline-images)
     :config
     )
 
+  ;; nix-mode for syntax highlighting nix configuration files
+  (use-package nix-mode
+    :ensure t)
   ;; Haskell language & direnv support
   (use-package haskell-mode
     :ensure t)
@@ -123,12 +93,17 @@ The following can be executed for a temporary session environment for this noteb
    'org-babel-load-languages
    '((shell   . t)
      (haskell . t)
-     (elisp   . t))
+     (emacs-lisp   . t)))
   (setq haskell-process-type 'ghci)
 
   (use-package org-indent
     :ensure nil
     :diminish)
+
+  ;; Enable navigating via a table of contents in a side buffer
+  (use-package org-sidebar
+    :ensure t)
+  (add-hook 'org-mode-hook 'org-sidebar-tree-toggle)
 
   ;; Hide emphasis markers
   (setq org-hide-emphasis-markers t)
@@ -144,160 +119,38 @@ The following can be executed for a temporary session environment for this noteb
     :config
     (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 
-  ;; Save place of cursor on exit
-  (use-package saveplace
-    :defer nil
-    :config
-    (save-place-mode))
-
   ;; Mode-specific bookmarks
   ;; `M-i` to jump in eg. org-mode to select heading in a list of headings.
   (use-package imenu-anywhere
     :bind
     ("M-i" . helm-imenu-anywhere))
 
-  ;; Smooth scrolling
-  ;(use-package smooth-scrolling
-  ;  :ensure t
-  ;  :config
-  ;  (smooth-scrolling-mode 1))
-
-  ;; Enable pixel scrolling to avoid jumping blocks when scrolling
-  ;(pixel-scroll-precision-mode)
-  ;(setq pixel-scroll-precision-large-scroll-height 40.0)
-
-  ;; Delete trailing whitespace on exit
-  (add-hook 'before-save-hook 'delete-trailing-whitespace)
-
-  ;; Save on unfocus
-  (defun save-all ()
-    (interactive)
-    (save-some-buffers t))
-  (add-hook 'focus-out-hook 'save-all)
-
-  ;; IDO for flex matching filenames and probably something else too
-  (use-package ido
-    :ensure t)
-  (setq ido-enable-flex-matching t)
-  (setq ido-everywhere t)
-  (ido-mode 1)
-
-  ;; IDO-based M-x, bases guesses on current active mode
-  (use-package smex
-    :ensure t)
-  (smex-initialize)
-  (global-set-key (kbd "M-x") 'smex)
-  (global-set-key (kbd "M-X") 'smex-major-mode-commands)
-  (global-set-key (kbd "C-c C-c M-x") 'execute-extended-command)
-
-  ;; `which-key`
-  (use-package which-key
-    :defer nil
-    :diminish which-key-mode
-    :config
-    (which-key-mode))
-
-  ;; toolbar mode off
-  (tool-bar-mode -1)
-
-  ;; Use `bind-key` instead of `global-set-key` to allow `M-x describe-personal-keybindings`.
-  (require 'bind-key)
-
-  ;; Go to line
-  (bind-key "M-g" 'goto-line)
-
-  ;; When using IDO (I think it's IDO), spaces try to auto-complete, making spaces in node names impossible. =Override IDO space matching to allow spaces in node names.=
-  (define-key minibuffer-local-completion-map (kbd "SPC") 'self-insert-command)
-
   ;; miscellaneous
   (use-package poet-theme
     :ensure t)
   (load-theme 'poet t)
-  ;(use-package wc-mode
-  ;  :ensure t)
-  ;(add-hook 'text-mode-hook
-  ;          (lambda ()
-  ;            (wc-mode 1)))
-  ;(display-battery-mode t)
   (setq sentence-end-double-space nil)
+#+end_src
 
-  ;; playground
-  (use-package magit
+To run frontend visualizations =ob-html-chrome= is recommended. A Chromium browser is required.
+#+begin_src elisp :results silent
+  (use-package ob-html-chrome
     :ensure t)
-  (setq magit-define-global-key-bindings 'recommended)
-
-  ;(use-package lsp-mode
-  ;  :ensure t)
-
-  ;; Optional: Show/pick completions on tab, sane max height:
-  (setq tab-always-indent 'complete
-        completions-max-height 20
-        completion-auto-select 'second-tab)
-
-  ;; Startup has finished. Revert performance optimizations.
-  (setq gc-cons-threshold (* 2 1000 1000))
-  )
+  (require 'ob-html-chrome)
+  (setq org-babel-html-chrome-chrome-executable
+    "/usr/bin/chromium-browser")
 #+end_src
 
-Result should be 2000000 if the script was run successfully.
+To open tangled files with =C-c C-o= on a tangled code block. /Is not transitive via noweb: works only with root blocks with :tangle set/
+#+begin_src elisp :results silent
+  (defun ibizaman/org-babel-goto-tangle-file ()
+      (if-let* ((args (nth 2 (org-babel-get-src-block-info t)))
+                (tangle (alist-get :tangle args)))
+          (when (not (equal "no" tangle))
+            (find-file tangle)
+            t)))
 
-Here are some further beautification and autosaves using the customize-interface and will mess with your own customizations permanently if any. We'll first also create an autosaves folder.
-#+begin_src shell :results silent
-  mkdir ~/.emacs.d/autosaves
-#+end_src
-
-#+begin_src elisp
-  ;; Autosave and backup directories
-  (custom-set-variables
-   '(auto-save-file-name-transforms
-     '((".*" "~/.emacs.d/autosaves/\\1" t)))
-   '(backup-directory-alist
-     '((".*" . "~/.emacs.d/backups/"))))
-
-  ;; Headline fonts
-  (when window-system
-    (let* ((variable-tuple
-	      (cond ((x-list-fonts "IBM Plex Serif")  '(:font "IBM Plex Serif"))
-		    ((x-family-fonts "Sans Serif")    '(:family "Sans Serif"))
-		    (nil (warn "Cannot find a Sans Serif Font.  Install IBM Plex Serif."))))
-	     (base-font-color     (face-foreground 'default nil 'default))
-	     (headline           `(:inherit default :weight bold :foreground ,base-font-color)))
-
-	(custom-theme-set-faces
-	 'user
-	 `(org-level-8 ((t (,@headline ,@variable-tuple))))
-	 `(org-level-7 ((t (,@headline ,@variable-tuple))))
-	 `(org-level-6 ((t (,@headline ,@variable-tuple))))
-	 `(org-level-5 ((t (,@headline ,@variable-tuple))))
-	 `(org-level-4 ((t (,@headline ,@variable-tuple :height 1.1))))
-	 `(org-level-3 ((t (,@headline ,@variable-tuple :height 1.25))))
-	 `(org-level-2 ((t (,@headline ,@variable-tuple :height 1.5))))
-	 `(org-level-1 ((t (,@headline ,@variable-tuple :height 1.75))))
-	 `(org-document-title ((t (,@headline ,@variable-tuple :height 2.0 :underline nil))))))
-    )
-
-  ;; Variable pitch fonts, mode hook, visual line mode, custom fixed pitch faces
-  (custom-theme-set-faces
-    'user
-    '(variable-pitch ((t (:family "IBM Plex Serif" :height 100))))
-    '(fixed-pitch ((t (:family "Fantasque Sans Mono")))))
-  (add-hook 'org-mode-hook 'variable-pitch-mode)
-  (add-hook 'org-mode-hook 'visual-line-mode)
-  (custom-theme-set-faces
-    'user
-    '(org-block ((t (:inherit fixed-pitch))))
-    '(org-code ((t (:inherit (shadow fixed-pitch)))))
-    '(org-document-info ((t (:foreground "dark orange"))))
-    '(org-document-info-keyword ((t (:inherit (shadow fixed-pitch)))))
-    '(org-indent ((t (:inherit (org-hide fixed-pitch)))))
-    '(org-link ((t (:foreground "royal blue" :underline t))))
-    '(org-meta-line ((t (:inherit (font-lock-comment-face fixed-pitch)))))
-    '(org-property-value ((t (:inherit fixed-pitch))) t)
-    '(org-special-keyword ((t (:inherit (font-lock-comment-face fixed-pitch)))))
-    '(org-table ((t (:inherit fixed-pitch :foreground "#83a598"))))
-    '(org-tag ((t (:inherit (shadow fixed-pitch) :weight bold :height 0.8))))
-    '(org-verbatim ((t (:inherit (shadow fixed-pitch))))))
-
+  (add-hook 'org-open-at-point-functions 'ibizaman/org-babel-goto-tangle-file)
 #+end_src
 
 ** Setup IHP and the initial project
@@ -309,153 +162,50 @@ Here are some further beautification and autosaves using the customize-interface
 
 IHP uses nix "flakes" which require special handling when used inside git repositories like the one this notebook is in ([[https://github.com/NixOS/nix/issues/6642][nix issue #6642]], [[https://github.com/digitallyinduced/ihp/issues/1787][ihp issue #1787]]). To work around this issue, a git repository has to be created for the IHP program. As of writing this, nix still used the old =ihp-new=, so this notebook is accompanied by the =ihp-new= @ commit 016a14d. =ihp-new= will initialize git repository with default credentials and options.
 
-Setting an IHP project up for the first time can take a long time, is verbose, and asks if precompiled binaries can be used. Thus, it is preferable to run it in a separate terminal. However the following block, which uses precompiled binaries, will work too:
+Setting an IHP project up for the first time can take a long time, is verbose, and asks if precompiled binaries can be used. Thus, it is preferable to run it in a separate terminal without piping =yes=. If using precompiled binaries is fine,  it can be run inside the notebook:
 #+begin_src shell :results silent :dir .
   yes | ./ihp-new liikuntakirja
 #+end_src
-If you have set up an IHP project before, running the following is fine:
-#+begin_src shell :results silent :dir .
-  ./ihp-new liikuntakirja
-#+end_src
 
-With the project set up, this document should now be tangled with  =C-c C-v t=.
+With the project set up, this document should now be tangled with  =C-c C-v t= (=org-babel-tangle=).
 
 The following assets are needed inside the program:
 #+begin_src shell :results silent :dir .
   cp assets/chart.umd.min.js liikuntakirja/static/
 #+end_src
 
-If editing the code, automatic tangling of this document should be enabled for smoother sailing. First install =org-auto-tangle= from outside the package management.
-#+begin_src shell :results silent
-  mkdir ~/.emacs.d/nonmanaged
-  git clone https://github.com/yilkalargaw/org-auto-tangle.git ~/.emacs.d/nonmanaged/org-auto-tangle
-#+end_src
-
+If editing the code, setting the editor to save on unfocus and to tangle on save smoothens the experience. Combined with IHP's reactive coding via autoreloading, it tightens the interactive loop.
 #+begin_src elisp
-  (use-package async
-    :defer t)
-  (use-package org-auto-tangle-
-    :load-path "nonmanaged/org-auto-tangle/"
-    :defer t
-    :hook (org-mode . org-auto-tangle-mode))
+  ;; Tangle on save
+  (add-hook 'org-mode-hook
+            (lambda () (add-hook 'after-save-hook #'org-babel-tangle
+                            :append :local)))
+  ;; Save on unfocus
+  (defun save-all ()
+    (interactive)
+    (save-some-buffers t))
+  (add-hook 'focus-out-hook 'save-all)
 #+end_src
-
-If you're making changes into the program and want to have the GHCi session reset between block executions, the following block can be run:
-#+begin_src elisp :results silent
-  (add-hook 'org-babel-after-execute-hook 'semacs/ob-args-ext-session-reset)
-
-  (defun semacs/ob-args-ext-session-reset()
-    (let* ((src-block-info (org-babel-get-src-block-info 'light))
-           (language (nth 0 src-block-info))
-           (arguments (nth 2 src-block-info))
-           (should-reset (member '(:session-reset . "yes") arguments))
-           (session (cdr (assoc :session arguments)))
-           (session-process
-            (cond ((equal language "haskell") (format "*haskell*" session))
-                  (t nil))))
-      (if (and should-reset (get-process session-process))
-          (kill-process session-process))))
-#+end_src
-
-A header argument =:session-reset yes= can be now used per-block, per-headline, or globally. /[broken for now]/
 
 ** Project configuration
+Org-babel's Haskell interface leans on hcky pattern matching. To get =ob-haskell= to execute Haskell blocks, we have to amend the default =.ghci= file with the default =ghci= prompt (=ghci>=), instead of the one set by IHP (=IHP>=).
+#+caption: Set default GHCi prompt
+#+begin_src haskell :noweb-ref Set default GHCi prompt
+  :set prompt "ghci> "
+#+end_src
 
-To get =ghci= session working with =ob-haskell= for executing Haskell blocks, we have to amend the default =.ghci= file with the proper prompt (=ghci>= instead of =IHP>=).
+#+caption: The IHP-provided .ghci with our amendment
 #+begin_src haskell :tangle liikuntakirja/.ghci
   :set -XNoImplicitPrelude
   :def loadFromIHP \file -> (System.Environment.getEnv "IHP_LIB") >>= (\ihpLib -> readFile (ihpLib <> "/" <> file))
   :loadFromIHP applicationGhciConfig
   import IHP.Prelude
-  :set prompt "ghci> "
+  <<Set default GHCi prompt>>
 #+end_src
 
-Then we'll have the =nix= boilerplate.
-#+begin_src nix :tangle liikuntakirja/Config/nix/nixpkgs-config.nix
-{ ihp, additionalNixpkgsOptions, ... }:
-import "${toString ihp}/NixSupport/make-nixpkgs-from-options.nix" {
-    ihp = ihp;
-    haskellPackagesDir = ./haskell-packages/.;
-    additionalNixpkgsOptions = additionalNixpkgsOptions;
-}
-#+end_src
-
-Everything should now be set for both running the program and the untangled blocks of code in this notebook. The following block can be used to test if the environment is set up properly.
-#+begin_src haskell :dir ./liikuntakirja
-  :t config
-#+end_src
-
-Any code block results can be cleared per-block with =C-c C-v k= and globally using universal prefix (=C-u C-c C-v k=).
-
-** Running the program
-
-#+begin_src shell :async yes :session *ihp* :dir ./liikuntakirja :results silent
-  ./start
-#+end_src
-
-* The Liikuntakirja story
-#+PROPERTY:header-args :dir ./liikuntakirja :mkdirp yes
-
-Liikuntakirja is a story of a person wanting to upload, view, edit, and delete their workout sessions originally recorded on a smartwatch. The universal fitness trackers found on market  are too complex to use and make compromises to cover all bases. These don't cater to tracking the user's workout sessions in a minimalistic way.
-
-The user is happy with a unified interface. A workout session can be selected from a drop-down menu and a new one can be uploaded by browsing their computer. At the same time the data from either the newest upload or the one specially selected from the drop-down is shown.
-
-The smartwatch data is  TCX-formatted, ready for uploading into the system. Since the data is essential to modelling the business logic in this program and what we'll show to the user, we'll start off with its upload and conversion logic.
-
-Every IHP program has a global configuration.
-#+name: global configuration
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Config/Config.hs
-  module Config where
-
-  import IHP.Prelude
-  import IHP.Environment
-  import IHP.FrameworkConfig
-  <<allow uploads import>>
-
-  config :: ConfigBuilder
-  config = do
-    option Development
-    option (AppHostname "localhost")
-    <<allow uploads>>
-#+end_src
-
-
-** Boilerplates [To be removed and distributed within the story]
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/Types.hs
-  module Web.Types where
-
-  import IHP.Prelude
-  import IHP.ModelSupport
-  import Generated.Types
-
-  data WebApplication = WebApplication deriving (Eq, Show)
-
-  data StaticController = WelcomeAction deriving (Eq, Show, Data)
-
-
-  <<tcx types>>
-
-  <<activities controller>>
-#+end_src
-
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Application/Helper/Controller.hs
-  module Application.Helper.Controller where
-
-  import IHP.ControllerPrelude
-  import Application.TCX
-
-  -- Here you can add functions which are available in all your controllers
-
-  <<tcx caller>>
-#+end_src
-
-Regarding external libraries, we use xml-conduit for massaging TCX files into respective types. IHP already includes the library, but let's be explicit about it.
-#+NAME: haskell dependencies
-#+begin_src nix
-xml-conduit
-#+end_src
-And then we include this in the tangled nix flake.
-#+begin_src nix :noweb yes :tangle liikuntakirja/flake.nix
+Any external programs or Haskell libraries should be added into the =flake.nix= which reproducibly builds the software environment for the program for any new deployment.
+#+caption: Flake configuration
+#+begin_src nix :tangle liikuntakirja/flake.nix
   {
       inputs = {
           ihp.url = "github:digitallyinduced/ihp/v1.2";
@@ -485,9 +235,7 @@ And then we include this in the tangled nix flake.
                           base
                           wai
                           text
-                          <<haskell dependencies>>
-                          # Uncomment on local development for testing
-                          # hspec
+                          <<Haskell dependencies>>
                       ];
                   };
 
@@ -503,225 +251,154 @@ And then we include this in the tangled nix flake.
                       };
                   };
               };
-
-              # Adding the new NixOS configuration for "qa"
-              # See https://ihp.digitallyinduced.com/Guide/deployment.html#deploying-with-deploytonixos for more info
-              # Used to deploy the IHP application to AWS.
-              #
-              # Change the `CHANGE-ME` to your correct config.
-              flake.nixosConfigurations."qa" = nixpkgs.lib.nixosSystem {
-                  system = "x86_64-linux";
-                  specialArgs = inputs;
-                  modules = [
-                      "${nixpkgs}/nixos/modules/virtualisation/amazon-image.nix"
-                      ihp.nixosModules.appWithPostgres
-                      ({ lib, pkgs, ... }: {
-
-                          networking.firewall = {
-                              enable = true;
-                              allowedTCPPorts = [ 22 80 443 ];
-                          };
-
-                          # Enable the Let's encrypt certificate
-                          security.acme.defaults.email = "CHANGE-ME@example.com";
-
-                          # Accept the terms of service of the Let's encrypt provider.
-                          security.acme.acceptTerms = true;
-
-                          services.nginx = {
-                              virtualHosts."CHANGE-ME.com" =  {
-                                  # Uncomment to have http auth with username `foo` and password `bar`.
-                                  # basicAuth = { foo = "bar"; };
-                              };
-                          };
-
-                          # Logging to AWS CloudWatch
-                          # services.vector = {
-                          #     enable = true;
-                          #     journaldAccess = true;
-                          #     settings = {
-                          #         sources.journald = {
-                          #             type = "journald";
-                          #             # Log only the services we care about
-                          #             include_units = ["app.service" "nginx.service" "worker.service"];
-                          #         };
-
-                          #         sinks.out = {
-                          #             group_name = "CHANGE-ME";
-                          #             stream_name = "CHANGE-ME";
-                          #             # Change the region to the correct one, e.g. `us-east-1`
-                          #             region = "CHANGE-ME";
-                          #             auth = {
-                          #                 access_key_id = "CHANGE-ME";
-                          #                 secret_access_key = "CHANGE-ME";
-                          #             };
-                          #             inputs  = ["journald"];
-                          #             type = "aws_cloudwatch_logs";
-                          #             compression = "gzip";
-                          #             encoding.codec = "json";
-                          #         };
-                          #     };
-                          # };
-
-                          services.ihp = {
-                              domain = "CHANGE-ME.com";
-                              migrations = ./Application/Migration;
-                              schema = ./Application/Schema.sql;
-                              fixtures = ./Application/Fixtures.sql;
-                              sessionSecret = "CHANGE-ME";
-                              # Uncomment to use a custom database URL
-                              # databaseUrl = lib.mkForce "postgresql://postgres:...CHANGE-ME";
-
-                              additionalEnvVars = {
-                                  # Uncomment to use a custom session secret, ensuring sessions aren't invalidated
-                                  # on each deploy.
-                                  # Learn how to create the secret key in https://ihp.digitallyinduced.com/Guide/deployment.html#ihpsessionsecret
-                                  # IHP_SESSION_SECRET = "CHANGE-ME";
-
-                                  SMTP_HOST = "email-smtp.eu-west-1.amazonaws.com";
-                                  SMTP_PORT = "587";
-                                  SMTP_ENCRYPTION = "STARTTLS";
-
-                                  SMTP_USER = "CHANGE-ME";
-                                  SMTP_PASSWORD = "CHANGE-ME";
-
-                                  AWS_ACCESS_KEY_ID = "CHANGE-ME";
-                                  AWS_SECRET_ACCESS_KEY = "CHANGE-ME";
-                              };
-                          };
-                          # As we use a pre-built AMI on AWS,
-                          # it is essential to enable automatic updates.
-                          # @see https://nixos.wiki/wiki/Automatic_system_upgrades
-                          system.autoUpgrade.enable = true;
-                          # Keep as is. See https://nixos.wiki/wiki/FAQ/When_do_I_update_stateVersion
-                          system.stateVersion = "23.05";
-                      })
-                  ];
-              };
-
           };
   }
 #+end_src
 
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/Routes.hs
-  module Web.Routes where
-  import IHP.RouterPrelude
-  import Generated.Types
-  import Web.Types
-
-  -- Generator Marker
-  instance AutoRoute StaticController
-  <<activities router>>
+Everything should now be set for both running the program and the untangled blocks of code in this notebook. The following block can be used to test if the environment is set up properly.
+#+begin_src haskell :dir ./liikuntakirja
+  :t config
 #+end_src
 
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/FrontController.hs
-  module Web.FrontController where
+Any code block results can be cleared per-block with =C-c C-v k= and globally using universal prefix (=C-u C-c C-v k=).
 
-  import IHP.RouterPrelude
-  import Web.Controller.Prelude
-  import Web.View.Layout (defaultLayout)
-
-  -- Controller Imports
-  import Web.Controller.Static
-  <<activities import>>
-
-  instance FrontController WebApplication where
-      controllers =
-          [ startPage WelcomeAction
-          -- Generator Marker
-          <<activities parse route>>
-          ]
-
-  instance InitControllerContext WebApplication where
-      initContext = do
-          setLayout defaultLayout
-          initAutoRefresh
+** Running the program
+We will have to set the =Development= / =Production= flags and a proper host name for the global =config=. These are fine for development:
+#+caption: Set development or production flags
+#+begin_src haskell :noweb-ref Set development or production flags
+  option Development
+  option (AppHostname "localhost")
 #+end_src
-
-*** Activities controller
-
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/Controller/Activities.hs
-  module Web.Controller.Activities where
-
-  import Web.Controller.Prelude
-  import Web.View.Activities.Index
-  import Web.View.Activities.New
-  import Web.View.Activities.Edit
-  import Web.View.Activities.Show
-
-  <<activities upload import>>
-
-  instance Controller ActivitiesController where
-      action ActivitiesAction = do
-          activities <- query @Activity |> fetch
-          render IndexView { .. }
-
-      action NewActivityAction = do
-          let activity = newRecord
-          render NewView { .. }
-
-      <<show activity>>
-      {-action ShowActivityAction { activityId } = do
-          activity <- fetch activityId
-          render ShowView { .. } -}
-
-      action EditActivityAction { activityId } = do
-          activity <- fetch activityId
-          render EditView { .. }
-
-      action UpdateActivityAction { activityId } = do
-          activity <- fetch activityId
-          activity
-              |> buildActivity
-              |> ifValid \case
-                  Left activity -> render EditView { .. }
-                  Right activity -> do
-                      activity <- activity |> updateRecord
-                      setSuccessMessage "Activity updated"
-                      redirectTo EditActivityAction { .. }
-
-      <<activities create from upload>>
-
-      action DeleteActivityAction { activityId } = do
-          activity <- fetch activityId
-          deleteRecord activity
-          setSuccessMessage "Activity deleted"
-          redirectTo ActivitiesAction
-
-  buildActivity activity = activity
-      |> fill @'["sport", "startTime", "planType", "deviceName"]
-#+end_src
-
-#+NAME: activities controller
+For deployment, following settings are used:
 #+begin_src haskell
+  option Production
+  option (AppHostname "domain.tld")
+#+end_src
+
+The program is run either by running =devenv up= or the =start= script. The front page should open up in your default browser (via =xdg-open=) once the web server has started. User interfacing part runs on port 8000 and a development IDE on 8001.
+#+begin_src shell :async yes :session *ihp* :dir ./liikuntakirja :results silent
+  ./start
+#+end_src
+
+** Weaving this notebook
+A =liikuntakirja.html= is produced in working directory and opened in your default browser with =C-c C-e h o=. For syntax highlighting, =htmlize= can be installed and will automatically hook on to the HTML export function.
+#+begin_src elisp
+  (use-package htmlize
+    :ensure t)
+#+end_src
+
+** Unit testing
+The project uses HSpec testing framework for unit tests.
+
+#+name: Haskell dependencies
+#+begin_src nix
+hspec
+#+end_src
+
+#+begin_src haskell :tangle liikuntakirja/Test/Main.hs
+  module Main where
+
+  import Test.Hspec
+  import IHP.Prelude
+
+  import Test.Controller.ActivitiesSpec
+  import Test.Application.TCXSpec
+
+  main :: IO ()
+  main = hspec do
+      <<Unit test modules>>
+#+end_src
+
+#+name: Universal IHP unit testing imports
+#+begin_src haskell
+  import Network.HTTP.Types.Status
+  import Data.Maybe (fromJust)
+
+  import IHP.Prelude
+  import IHP.QueryBuilder (query)
+  import IHP.Test.Mocking
+  import IHP.Fetch
+
+  import IHP.FrameworkConfig
+  import IHP.HaskellSupport
+  import Test.Hspec
+  import Config
+  import Generated.Types
+#+end_src
+
+#+caption: Unit test module (Activities controller)
+#+begin_src haskell :noweb-ref Unit test modules
+  Test.Controller.ActivitiesSpec.tests
+#+end_src
+#+begin_src haskell :tangle liikuntakirja/Test/Controller/ActivitiesSpec.hs
+  module Test.Controller.ActivitiesSpec where
+
+  <<Universal IHP unit testing imports>>
+
+  import Web.Routes
+  import Web.Types
+  import Web.Controller.Activities (convertTcxActivityToWebActivity)
+  import Web.FrontController ()
+  import Network.Wai
+  import IHP.ControllerPrelude
+  import Application.TCX (processTcxFile)
+
+  tests :: Spec
+  tests = aroundAll (withIHPApp WebApplication config) do
+          describe "ActivitiesController" $ do
+            it "has no existing activities" $ withContext do
+              count <- query @Activity
+                       |> fetchCount
+              count `shouldBe` 0
+            <<Test converting TcxActivity into database records>>
+#+end_src
+
+With the framework set up, we can now run all the tests by loading Main and running =main=.
+#+begin_src haskell
+  :l Test/Main
+  main
+#+end_src
+
+#+RESULTS:
+
+
+* The Liikuntakirja story
+#+PROPERTY:header-args :dir ./liikuntakirja :mkdirp yes :exports code :noweb no-export
+Liikuntakirja is a story of a person wanting to upload, view, edit, and delete their workout sessions originally recorded on a smartwatch. The universal fitness trackers found on market are too complex to use and make compromises to cover all bases. These don't cater to tracking the user's workout sessions in a minimalistic way.
+
+The user is happy with a unified interface. A workout session can be selected from a drop-down menu and a new one can be uploaded by browsing their computer. At the same time the data from either the newest upload or the one specially selected from the drop-down is shown.
+
+This document will lead us from the perspective of a user using the software artefact. The user will first see the front page with all added activities indexed. They will then move on to add an activity. Then they will examine the added activity. After that the activity will be deleted as unsatisfactory.
+
+A set of tests will be derived from the story and the code derived from those will be dispersed there on a need-to-know basis, which means all of the boilerplate that doesn't fit in can be found as an appendix. The boilerplate should only have to be edited when refactoring the code or the test suite.
+
+** User accesses Liikuntakirja via browser
+Since the user is only interested in activities, we can do everything via =ActivitiesController=. =Activity= is a data structure signifying a single workout. It is examined closer in the next chapter. =ActivitiesController= produces a =View= depending on the =Action=. Multiple =Actions= can lead to the same =View=, like =ActivitiesAction= and =DeleteActivityAction= will both end up rendering the indexing =View=.
+#+caption: Activities controller type constructors
+#+begin_src haskell :noweb-ref Activities controller type constructors
   data ActivitiesController
       = ActivitiesAction
       | NewActivityAction
       | ShowActivityAction { activityId :: !(Id Activity) }
       | CreateActivityAction
-      | EditActivityAction { activityId :: !(Id Activity) }
-      | UpdateActivityAction { activityId :: !(Id Activity) }
       | DeleteActivityAction { activityId :: !(Id Activity) }
       deriving (Eq, Show, Data)
 #+end_src
-
-#+NAME: activities router
-#+begin_src haskell
-  instance AutoRoute ActivitiesController
+#+caption: Set ActivitiesAction as front page
+#+begin_src haskell :noweb-ref Set ActivitiesAction as front page
+  startPage ActivitiesAction
 #+end_src
 
-#+NAME: activities import
-#+begin_src haskell
-  import Web.Controller.Activities
+=ActivitiesAction= will query all activities from the database:
+#+caption: Index Activities using IndexView
+#+begin_src haskell :noweb-ref Index Activities using IndexView
+  action ActivitiesAction = do
+    activities <- query @Activity |> fetch
+    render IndexView { .. }
 #+end_src
-
-#+NAME: activities parse route
-#+begin_src haskell
-  , parseRoute @ActivitiesController
-#+end_src
-
-The indexing view
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/View/Activities/Index.hs
+And =IndexView= will then list the activities. IHP uses JSX-like HSX syntax. It enables embedding Haskell code inside page layouts.
+#+caption: An IHP boilerplate for a View instance, IndexView in this case.
+#+begin_src haskell :tangle liikuntakirja/Web/View/Activities/Index.hs
   module Web.View.Activities.Index where
   import Web.View.Prelude
 
@@ -729,7 +406,7 @@ The indexing view
 
   instance View IndexView where
       html IndexView { .. } = [hsx|
-          <<activities index hsx>>
+          <<Lay out the Activities index page>>
       |]
           where
               breadcrumb = renderBreadcrumb
@@ -738,14 +415,14 @@ The indexing view
 
   renderActivity :: Activity -> Html
   renderActivity activity = [hsx|
-      <<activities index render hsx>>
+      <<Lay out the individual Activity for indexing>>
   |]
 #+end_src
-#+NAME: activities index hsx
-#+begin_src html
+#+caption: Lay out the Activities index page
+#+begin_src html :noweb-ref Lay out the Activities index page
   {breadcrumb}
 
-  <h1>Index<a href={pathTo NewActivityAction} class="btn btn-primary ms-4">+ New</a></h1>
+  <<Lay out the headline and new Activity button>>
   <div class="table-responsive">
     <table class="table">
       <thead>
@@ -761,18 +438,43 @@ The indexing view
 
   </div>
 #+end_src
-#+NAME: activities index render hsx
-#+begin_src html
+#+caption: Lay out the individual Activity for indexing
+#+begin_src html :noweb-ref Lay out the individual Activity for indexing
   <tr>
     <td>{activity}</td>
     <td><a href={ShowActivityAction activity.id}>Show</a></td>
-    <td><a href={EditActivityAction activity.id} class="text-muted">Edit</a></td>
     <td><a href={DeleteActivityAction activity.id} class="js-delete text-muted">Delete</a></td>
   </tr>
 #+end_src
 
-The view for creating new ones
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/View/Activities/New.hs
+To add an Activity, the user finds the 'New' button found on the headline:
+#+caption: Lay out the headline and new Activity button
+#+begin_src html :noweb-ref Lay out the headline and new Activity button
+  <h1>Index<a href={pathTo NewActivityAction} class="btn btn-primary ms-4">+ New</a></h1>
+#+end_src
+
+** User uploads smartwatch data into Liikuntakirja
+The user has TCX-formatted smartwatch data files on their computer, ready for uploading.
+*** Uploading into database
+To allow user uploads to =static/= directory, we'll have to import a configuration and some flags in =Config.hs= defined at Configure IHP
+#+caption: Import upload configuration
+#+begin_src haskell :noweb-ref Import upload configuration
+  import IHP.FileStorage.Config
+#+end_src
+#+caption: Allow uploads
+#+begin_src haskell :noweb-ref Allow uploads
+  initStaticDirStorage
+#+end_src
+
+A simple file upload form is enough, everything in =Activity= can be derived from the uploaded TCX file.
+#+caption: Lay out Activity upload form
+#+begin_src html :noweb-ref Lay out Activity upload form
+  {(fileField #uploadUrl) { required = True }}
+  {submitButton}
+#+end_src
+The page for uploading the new =Activity= is kept simple. *TODO:* should be integrated into =IndexView= for unified interface as requested.
+#+caption: A View instance for NewView
+#+begin_src haskell :tangle liikuntakirja/Web/View/Activities/New.hs
   module Web.View.Activities.New where
   import Web.View.Prelude
 
@@ -780,7 +482,7 @@ The view for creating new ones
 
   instance View NewView where
       html NewView { .. } = [hsx|
-          <<activities new hsx>>
+          <<Lay out new Activity page>>
       |]
           where
               breadcrumb = renderBreadcrumb
@@ -790,185 +492,29 @@ The view for creating new ones
 
   renderForm :: Activity -> Html
   renderForm activity = formFor activity [hsx|
-      <<activities new form hsx>>
+      <<Lay out Activity upload form>>
   |]
 #+end_src
-#+NAME: activities new hsx
-#+begin_src html
+#+caption: Lay out new Activity page
+#+begin_src html :noweb-ref Lay out new Activity page
   {breadcrumb}
   <h1>New Activity</h1>
   {renderForm activity}
 #+end_src
-#+NAME: activities new form hsx
-#+begin_src html :noweb yes
-  <<activities upload file hsx>>
-  {submitButton}
+
+Once the user clicks "Upload", we will pass the uploaded TCX for conversion.
+*** Converting the uploaded TCX file
+When the user submits the form, the file arrives at the respective =ActivitiesController= action. User will be redirected back to the front page. In between, the TCX file is converted into an intermediate =TcxActivity= and finally to =Activity= compatible with our database setup.
+#+caption: Create Activity from uploaded TCX
+#+begin_src haskell :noweb-ref Create Activity from uploaded TCX
+  action CreateActivityAction = do
+    <<Convert uploaded TCX into TcxActivity>>
+    convertTcxActivityToWebActivity tcx
+    setSuccessMessage ("Activity uploaded!")
+    redirectTo ActivitiesAction
 #+end_src
-
-The view for showing an activity.
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/View/Activities/Show.hs
-  module Web.View.Activities.Show where
-  import Web.View.Prelude
-
-  <<ShowView definition>>
-
-  instance View ShowView where
-      html ShowView { .. } = [hsx|
-          <<activities show hsx>>
-      |]
-          where
-              breadcrumb = renderBreadcrumb
-                              [ breadcrumbLink "Activities" ActivitiesAction
-                              , breadcrumbText "Show Activity"
-                              ]
-#+end_src
-
-The view for editing an activity
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/View/Activities/Edit.hs
-  module Web.View.Activities.Edit where
-  import Web.View.Prelude
-
-  data EditView = EditView { activity :: Activity }
-
-  instance View EditView where
-      html EditView { .. } = [hsx|
-          <<activities edit hsx>>
-      |]
-          where
-              breadcrumb = renderBreadcrumb
-                  [ breadcrumbLink "Activities" ActivitiesAction
-                  , breadcrumbText "Edit Activity"
-                  ]
-
-  renderForm :: Activity -> Html
-  renderForm activity = formFor activity [hsx|
-      <<activities edit form hsx>>
-  |]
-#+end_src
-#+NAME: activities edit hsx
-#+begin_src html
-  {breadcrumb}
-  <h1>Edit Activity</h1>
-  {renderForm activity}
-#+end_src
-#+NAME: activities edit form hsx
-#+begin_src html
-  {(textField #sport)}
-  {(textField #startTime)}
-  {(textField #planType)}
-  {(textField #deviceName)}
-  {submitButton}
-#+end_src
-
-*** Javascript libraries, CSS stylesheets, meta tags and default layout
-#+name: javascript libraries
-#+begin_src html :noweb yes
-  {when isDevelopment devScripts}
-  <script src={assetPath "/vendor/jquery-3.6.0.slim.min.js"}></script>
-  <script src={assetPath "/vendor/timeago.js"}></script>
-  <script src={assetPath "/vendor/popper-2.11.6.min.js"}></script>
-  <script src={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.js"}></script>
-  <script src={assetPath "/vendor/flatpickr.js"}></script>
-  <script src={assetPath "/vendor/morphdom-umd.min.js"}></script>
-  <script src={assetPath "/vendor/turbolinks.js"}></script>
-  <script src={assetPath "/vendor/turbolinksInstantClick.js"}></script>
-  <script src={assetPath "/vendor/turbolinksMorphdom.js"}></script>
-  <script src={assetPath "/helpers.js"}></script>
-  <script src={assetPath "/ihp-auto-refresh.js"}></script>
-  <script src={assetPath "/app.js"}></script>
-  <<chart.js import>>
-#+end_src
-
-#+name: css stylesheets
-#+begin_src html
-  <link rel="stylesheet" href={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.css"}/>
-  <link rel="stylesheet" href={assetPath "/vendor/flatpickr.min.css"}/>
-  <link rel="stylesheet" href={assetPath "/app.css"}/>
-#+end_src
-
-#+name: meta tags
-#+begin_src html
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-  <meta property="og:title" content="App"/>
-  <meta property="og:type" content="website"/>
-  <meta property="og:url" content="TODO"/>
-  <meta property="og:description" content="TODO"/>
-  {autoRefreshMeta}
-#+end_src
-
-#+name: development scripts
-#+begin_src html
-<script id="livereload-script" src={assetPath "/livereload.js"} data-ws={liveReloadWebsocketUrl}></script>
-#+end_src
-
-#+name: default layout
-#+begin_src html
-  <!DOCTYPE html>
-  <html lang="en">
-      <head>
-          {metaTags}
-
-          {stylesheets}
-          {scripts}
-
-          <title>{pageTitleOrDefault "App"}</title>
-      </head>
-      <body>
-          <div class="container mt-4">
-              {renderFlashMessages}
-              {inner}
-          </div>
-      </body>
-  </html>
-#+end_src
-
-#+begin_src haskell :noweb yes :tangle liikuntakirja/Web/View/Layout.hs
-
-  module Web.View.Layout (defaultLayout, Html) where
-
-  import IHP.ViewPrelude
-  import IHP.Environment
-  import Generated.Types
-  import IHP.Controller.RequestContext
-  import Web.Types
-  import Web.Routes
-  import Application.Helper.View
-
-  defaultLayout :: Html -> Html
-  defaultLayout inner = [hsx|
-  <<default layout>>
-  |]
-
-  -- The 'assetPath' function used below appends a `?v=SOME_VERSION` to the static assets in production
-  -- This is useful to avoid users having old CSS and JS files in their browser cache once a new version is deployed
-  -- See https://ihp.digitallyinduced.com/Guide/assets.html for more details
-
-  stylesheets :: Html
-  stylesheets = [hsx|
-          <<css stylesheets>>
-      |]
-
-  scripts :: Html
-  scripts = [hsx|
-          <<javascript libraries>>
-      |]
-
-  devScripts :: Html
-  devScripts = [hsx|
-          <<development scripts>>
-      |]
-
-  metaTags :: Html
-  metaTags = [hsx|
-      <<meta tags>>
-  |]
-#+end_src
-** Loading smartwatch data into Liikuntakirja
-*** Conversion from a TCX file
-
-The TCX file we'll receive is an XML-formatted file. An example TCX produced by a 5-second workout. Trackpoints in this are of most interest as it keeps track of heart rate, speed and time, but Lap and Activity have some useful metadata too.
-#+NAME: tcx case 1
+The TCX file we've received is an XML-formatted file. In the file, Trackpoints are of most interest as it keeps track of heart rate, speed and time, but Lap and Activity have some useful metadata too. An example TCX produced by a 5-second workout.
+#+caption: TCX XML for a simple unit test
 #+begin_src xml :tangle liikuntakirja/test.tcx
 <?xml version="1.0" encoding="UTF-8"?>
 <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
@@ -1061,12 +607,9 @@ The TCX file we'll receive is an XML-formatted file. An example TCX produced by 
   </Author>
 </TrainingCenterDatabase>
 #+end_src
-
-So, the relevant data will be defined by the following type structures. We'll have a tree structure going from Activity, to Lap, to Trackpoint. Types are prefixed by 'Tcx' to avoid collisions with IHP's database-derived types.
-
-Activity type for conversion:
-#+NAME: tcx activity
-#+begin_src haskell
+The following type structures are directly derived from this XML structure with irrelevant data pruned out. We end up with a tree structure going from Activity, to Lap, to Trackpoint. Intermediate types are prefixed by 'Tcx' to avoid collisions with IHP's database-derived types. Intermediate types are used to easen the transition between top-down tree structure idiomatic to Haskell records and bottom-up tree structures idiomatic to relational databases. Activity type for conversion:
+#+caption: TcxActivity
+#+begin_src haskell :noweb-ref TcxActivity
   data TcxActivity = TcxActivity
     { tcxLaps :: [TcxLap]
     , tcxSport :: Text
@@ -1076,8 +619,8 @@ Activity type for conversion:
     } deriving (Eq, Show)
 #+end_src
 And the database schema derived from it:
-#+NAME: activity schema
-#+begin_src sql
+#+caption: Activity schema
+#+begin_src sql :noweb-ref Activity schema
   CREATE TABLE activities (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
       sport TEXT NOT NULL,
@@ -1089,8 +632,8 @@ And the database schema derived from it:
 #+end_src
 
 Activities consist of one or more laps.
-#+NAME: tcx lap
-#+begin_src haskell
+#+caption: TcxLap
+#+begin_src haskell :noweb-ref TcxLap
   data TcxLap = TcxLap
     { tcxLapStart :: UTCTime
     , tcxLapTotal :: TotalTimeSec
@@ -1103,8 +646,8 @@ Activities consist of one or more laps.
     , tcxTrack :: TcxTrack
     } deriving (Eq, Show)
 #+end_src
-#+NAME: lap schema
-#+begin_src sql
+#+caption: Lap schema
+#+begin_src sql :noweb-ref Lap schema
   CREATE TABLE laps (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
       activity_id UUID NOT NULL,
@@ -1120,8 +663,8 @@ Activities consist of one or more laps.
 #+end_src
 
 Laps in turn consist of tracks which are collections of trackpoints. We will assume any extra tracks can be concatenated into one single track to simplify the data model.
-#+NAME: tcx trackpoint
-#+begin_src haskell
+#+caption: TcxTrackpoint
+#+begin_src haskell :noweb-ref TcxTrackpoint
   data TcxTrackpoint = TcxTrackpoint
     { tcxTpTime :: UTCTime
     , tcxTpDistance :: DistanceMeters
@@ -1131,8 +674,8 @@ Laps in turn consist of tracks which are collections of trackpoints. We will ass
 
   type TcxTrack = [TcxTrackpoint]
 #+end_src
-#+NAME: trackpoint schema
-#+begin_src sql
+#+caption: Trackpoint schema
+#+begin_src sql :noweb-ref Trackpoint schema
   CREATE TABLE trackpoints (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
       lap_id UUID NOT NULL,
@@ -1144,28 +687,143 @@ Laps in turn consist of tracks which are collections of trackpoints. We will ass
 #+end_src
 
 We collect these along with some descriptive aliases into types for the application.
-#+NAME: tcx types
-#+begin_src haskell :noweb yes
+#+caption: Tcx types
+#+begin_src haskell :noweb-ref Tcx types
   type TotalTimeSec = Float
   type DistanceMeters = Float
   type Calories = Int
   type HeartRateBpm = Int
 
-  <<tcx trackpoint>>
+  <<TcxTrackpoint>>
 
-  <<tcx lap>>
+  <<TcxLap>>
 
-  <<tcx activity>>
+  <<TcxActivity>>
 #+end_src
-#+NAME: tcx schema
-#+begin_src sql :noweb yes
-  <<activity schema>>
-  <<lap schema>>
-  <<trackpoint schema>>
+#+caption: Tcx schema
+#+begin_src sql :noweb-ref Tcx schema
+  <<Activity schema>>
+  <<Lap schema>>
+  <<Trackpoint schema>>
+#+end_src
+
+The example TCX file should then parse into a structure like this.
+#+caption: Simple TCX XML converted to a record
+#+begin_src haskell
+  [TcxActivity
+   { tcxLaps =
+       [ TcxLap
+         { tcxLapStart = 2024-03-19 12:28:25.47 UTC
+         , tcxLapTotal = 5.0
+         , tcxLapDistance = 0.0
+         , tcxCals = 1
+         , tcxAvgHR = 61
+         , tcxMaxHR = 62
+         , tcxIntensity = "Active"
+         , tcxTrigger = "Manual"
+         , tcxTrack =
+             [ TcxTrackpoint
+               { tcxTpTime = 2024-03-19 12:28:25.47 UTC
+               , tcxTpDistance = 0.0
+               , tcxTpHR = 62
+               , tcxSensor = "Present"
+               }
+             , TcxTrackpoint
+               { tcxTpTime = 2024-03-19 12:28:26.47 UTC
+               , tcxTpDistance = 0.0
+               , tcxTpHR = 61
+               , tcxSensor = "Present"
+               }
+             , TcxTrackpoint
+               { tcxTpTime = 2024-03-19 12:28:27.47 UTC
+               , tcxTpDistance = 0.0
+               , tcxTpHR = 61
+               , tcxSensor = "Present"
+               }
+             , TcxTrackpoint
+               { tcxTpTime = 2024-03-19 12:28:28.47 UTC
+               , tcxTpDistance = 0.0
+               , tcxTpHR = 61
+               , tcxSensor = "Present"
+               }
+             , TcxTrackpoint
+               { tcxTpTime = 2024-03-19 12:28:29.47 UTC
+               , tcxTpDistance = 0.0
+               , tcxTpHR = 61
+               , tcxSensor = "Present"
+               }
+             ]
+         }
+       ]
+   , tcxSport = "Other"
+   , tcxActStart = 2024-03-19 12:28:24.47 UTC
+   , tcxPlanType = "Workout"
+   , tcxDeviceName = "Polar INW3N_V2"
+   }]
+#+end_src
+
+=TcxActivity='s =Show= instance should then produce this for the unit test comparison:
+#+begin_src haskell :tangle liikuntakirja/test.tcx.result
+  [TcxActivity {tcxLaps = [TcxLap {tcxLapStart = 2024-03-19 12:28:25.47 UTC, tcxLapTotal = 5.0, tcxLapDistance = 0.0, tcxCals = 1, tcxAvgHR = 61, tcxMaxHR = 62, tcxIntensity = "Active", tcxTrigger = "Manual", tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:25.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 62, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:26.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:27.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:28.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:29.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"}]}], tcxSport = "Other", tcxActStart = 2024-03-19 12:28:24.47 UTC, tcxPlanType = "Workout", tcxDeviceName = "Polar INW3N_V2"}]
+#+end_src
+We can now make a unit testing file for these conversions. Since the XML files are big and not trivially referenced in string form in Haskell, we'll load it from a file.
+#+caption: TCX unit tests
+#+begin_src haskell :tangle liikuntakirja/Test/Application/TCXSpec.hs
+  module Test.Application.TCXSpec where
+  import Test.Hspec
+  import IHP.Prelude
+  import Data.Time (UTCTime)
+  import Data.Text.IO (readFile)
+  import Text.Read (read)
+
+  import Application.TCX
+  import Web.Types
+
+  tests :: Spec
+  tests = do
+    tcxToRecord
+
+  tcxToRecord :: Spec
+  tcxToRecord = do
+    describe "processTcxFile" $ do
+      it "can convert TCX file into TcxActivity" $ do
+        convertedTcx <- processTcxFile "test.tcx"
+        resultTcx <- readFile "test.tcx.result"
+        (show convertedTcx ++ "\n") `shouldBe`
+          resultTcx
+#+end_src
+#+caption: Unit test modules
+#+begin_src haskell :noweb-ref Unit test modules
+  Test.Application.TCXSpec.tests
+#+end_src
+
+First we'll convert the uploaded XML into the =TcxActivity= record type. TCX files can theoretically have multiple =Activities=, but they are not expected in this case. Neither is graceful exception handling required due to threaded nature of IHP and the singular purpose of the upload request, so using =fromJust= as a shortcut is fine for now.
+#+caption: Convert uploaded TCX into TcxActivity
+#+begin_src haskell :noweb-ref Convert uploaded TCX into TcxActivity
+  let tcx :: TcxActivity =
+        fileOrNothing "uploadUrl"
+        |> fromMaybe (error "no file given")
+        |> (.fileContent)
+        |> cs
+        |> processTcxUpload
+        |> head
+        |> fromJust
+#+end_src
+
+The external functions used in these conversions. Using =fromJust= is fine, since we can expect XML to be correctly formed and in malformed cases the silent =error= is not an issue. The service will keep on running in these cases.
+#+caption: Import TCX conversion functions
+#+begin_src haskell :noweb-ref Import TCX conversion functions
+  import Application.TCX (processTcxUpload)
+  import Data.Maybe (fromJust)
 #+end_src
 
 Since there are no libraries available for directly extracting the TCX format, we'll construct a filter chain using =xml-conduit= (Text.XML and Text.XML.Cursor).
+#+caption: Haskell dependencies
+#+begin_src nix :noweb-ref Haskell dependencies
+xml-conduit
+#+end_src
 
+#+caption: Application.TCX prologue
 #+begin_src haskell :tangle liikuntakirja/Application/TCX.hs
   {-# LANGUAGE OverloadedStrings #-}
 
@@ -1184,10 +842,15 @@ Since there are no libraries available for directly extracting the TCX format, w
   import IHP.Prelude
   import Text.Read
   import Web.Types
+
+  <<Key TCX functions>>
+
+  <<The TCX inner works>>
 #+end_src
 
-There are two entry points to this TCX extractor: =processTcxFile= and =processTcxUpload=. Either approach would be fine with IHP's file uploading routine, but converting from =Text= rather than from =FilePath= inside =IO= monad is more straightforward. XML extractors like /Haskell XML Toolkit/ only work with files, so having =processTcxFile= is a fulfilling a standard of sorts.
-#+begin_src haskell :tangle liikuntakirja/Application/TCX.hs
+There are two entry points to this TCX extractor: =processTcxFile= and =processTcxUpload=. Either approach would be fine with IHP's file uploading routine, but converting from =Text= rather than from =FilePath= inside =IO= monad is more straightforward. XML extractors like /Haskell XML Toolkit/ only work with files, so having =processTcxFile= is fulfilling idiomatic expectations, but also enables testing with larger files.
+#+caption: Key TCX functions
+#+begin_src haskell :noweb-ref Key TCX functions
   processTcxFile :: FilePath -> IO [TcxActivity]
   processTcxFile file = processTcx <$> TLIO.readFile file
 
@@ -1198,8 +861,9 @@ There are two entry points to this TCX extractor: =processTcxFile= and =processT
   processTcx = getActivities . fromDocument . parseText_ def
 #+end_src
 
-Extracting the fields in this case is straightforward if repetitive and verbose. It could be cleaned up with some helper functions.
-#+begin_src haskell :tangle liikuntakirja/Application/TCX.hs
+Extracting the fields in this case is logically simple if repetitive and verbose. It could be cleaned up with some helper functions. =read= is used, but as before, graceful exception handling is not required here, although could be relatively easily added since the return value of =[TcxActivity]= is essentially a =Maybe= structure.
+#+caption: The TCX inner works
+#+begin_src haskell :noweb-ref The TCX inner works
   getActivities :: Cursor -> [TcxActivity]
   getActivities cr =
     let activitiesCr = child cr >>= laxElement "Activities" >>= child >>= laxElement "Activity"
@@ -1243,154 +907,437 @@ Extracting the fields in this case is straightforward if repetitive and verbose.
 
   readTime :: Text -> UTCTime
   readTime = fromJust . formatParseM iso8601Format . T.unpack
-
 #+end_src
 
-Having put all this together, we can now convert TCX files into a Haskell record structure:
+Having put all this together, we can now convert a TCX file into a Haskell record structure:
 #+begin_src haskell
-  Application.TCX.processTcxFile "test.tcx" >>= putStrLn . show
+  :l Test/Main
+  hspec $ Test.Application.TCXSpec.tcxToRecord
 #+end_src
 
-*** Uploading into database
-To allow uploading into the program's =static/= directory we'll have to add an import and some flags in =Config.hs= defined at [[global configuration]]
-#+NAME: allow uploads import
-#+begin_src haskell
-  import IHP.FileStorage.Config
+Then we can do a type conversion similar to the one we did in when reading the XML: converting from the intermediate =TcxActivity= into the =Activity=  and others, which are then saved in the database via =createRecord= and its merged INSERT variation =createMany=. IHP will then be using =Activity=, =Lap= and =Trackpoint= in the views.
+#+caption: Test converting TcxActivity into database records
+#+begin_src haskell :noweb-ref Test converting TcxActivity into database records
+  it "adds a TCX upload successfully into database" $ withContext do
+    tcx <- fromJust . head <$> processTcxFile "test.tcx"
+    convertTcxActivityToWebActivity tcx
+    actCount <- query @Activity |> fetchCount
+    actCount `shouldBe` 1
+    lapCount <- query @Lap |> fetchCount
+    actCount `shouldBe` 1
+    tpCount <- query @Trackpoint |> fetchCount
+    tpCount `shouldBe` 5
 #+end_src
-#+NAME: allow uploads
-#+begin_src haskell
-  initStaticDirStorage
-#+end_src
-
-Then we'll add an file upload field into the HSX found in [[activities new form hsx]]
-#+NAME: activities upload file hsx
-#+begin_src html
-  {(fileField #uploadUrl) { required = True }}
-#+end_src
-
-When the user submits the form, we'll arrive at the respective =ActivitiesController= action. First we'll have to convert the uploaded XML into the record type found in the last chapter.
-#+name: convert upload XML into TcxActivity
-#+begin_src haskell
-  let tcx :: TcxActivity =
-        fileOrNothing "uploadUrl"
-        |> fromMaybe (error "no file given")
-        |> (.fileContent)
-        |> cs
-        |> processTcxUpload
-        |> head
-        |> fromJust
-#+end_src
-
-Then we can do a type conversion similar to the one we did in when reading the XML: converting from the intermediate =TcxActivity= into the =Activity=  and others, which are then saved in the database via =createRecord=. IHP will then be using =Activity=, =Lap= and =Trackpoint= in the views. The reason for using intermediate record is that SQL essentially requires a sort of reversed structure where =Trackpoint= points to =Lap= and =Lap= to =Activity=, and this is not feasible to model with Haskell records.
-#+name: convert TcxActivity into IHP's Activity and other records
-#+begin_src haskell
-  activity <- newRecord @Activity
-              |> set #sport (tcxSport tcx)
-              |> set #startTime (tcxActStart tcx)
-              |> set #planType (tcxPlanType tcx)
-              |> set #deviceName (tcxDeviceName tcx)
-              |> createRecord
-  laps <- mapM (\lap -> newRecord @Lap
-                        |> set #activityId (unpackId activity.id)
-                        |> set #startTime (tcxLapStart lap)
-                        |> set #totalTime (tcxLapTotal lap)
-                        |> set #distance (tcxLapDistance lap)
-                        |> set #calories (tcxCals lap)
-                        |> set #averageHr (tcxAvgHR lap)
-                        |> set #maximumHr (tcxMaxHR lap)
-                        |> set #intensity (tcxIntensity lap)
-                        |> set #trigger (tcxTrigger lap)
-                        |> createRecord
-               ) (tcxLaps tcx)
-  let lapIdsWithTracks = zip (map (.id) laps) (map tcxTrack $ tcxLaps tcx)
-  mapM_ (\(lapId, tcks) ->
-           mapM_ (\tck -> newRecord @Trackpoint
-                          |> set #lapId (unpackId lapId)
-                          |> set #pointTime (tcxTpTime tck)
-                          |> set #distance (tcxTpDistance tck)
-                          |> set #hr (tcxTpHR tck)
-                          |> set #sensor (tcxSensor tck)
-                          |> createRecord
-                 ) tcks
-        ) lapIdsWithTracks
+#+caption: Convert TcxActivity into Activity and other database records
+#+begin_src haskell :noweb-ref Convert TcxActivity into Activity and other database records
+  convertTcxActivityToWebActivity tcx = do
+    activity <- newRecord @Activity
+                |> set #sport (tcxSport tcx)
+                |> set #startTime (tcxActStart tcx)
+                |> set #planType (tcxPlanType tcx)
+                |> set #deviceName (tcxDeviceName tcx)
+                |> createRecord
+    laps <- createMany $ map (\lap -> newRecord @Lap
+                                      |> set #activityId (unpackId activity.id)
+                                      |> set #startTime (tcxLapStart lap)
+                                      |> set #totalTime (tcxLapTotal lap)
+                                      |> set #distance (tcxLapDistance lap)
+                                      |> set #calories (tcxCals lap)
+                                      |> set #averageHr (tcxAvgHR lap)
+                                      |> set #maximumHr (tcxMaxHR lap)
+                                      |> set #intensity (tcxIntensity lap)
+                                      |> set #trigger (tcxTrigger lap)
+                             ) (tcxLaps tcx)
+    let lapIdsWithTracks = zip (map (.id) laps) (map tcxTrack $ tcxLaps tcx)
+    mapM_ (\(lapId, tcks) ->
+             createMany $ map (\tck -> newRecord @Trackpoint
+                                       |> set #lapId (unpackId lapId)
+                                       |> set #pointTime (tcxTpTime tck)
+                                       |> set #distance (tcxTpDistance tck)
+                                       |> set #hr (tcxTpHR tck)
+                                       |> set #sensor (tcxSensor tck)
+                              ) tcks
+          ) lapIdsWithTracks
 #+end_src
 
-These two conversions then come together and with the results saved into database with =createRecord= earlier, we can congratulate the user and move them into the Activities index. *TODO: we'll move the user to the uploaded activity*
-#+NAME: activities create from upload
-#+begin_src haskell :noweb yes
-  action CreateActivityAction = do
-    <<convert upload XML into TcxActivity>>
-    <<convert TcxActivity into IHP's Activity and other records>>
-    setSuccessMessage ("Activity uploaded!")
-    redirectTo ActivitiesAction
-#+end_src
+These two conversions then come together and with the results saved into database with =createRecord= and =createMany= earlier, we can congratulate the user and move them into the Activities index. *TODO: we'll move the user to the uploaded activity*
 
-The external functions used in these conversions. Using =fromJust= is fine, since we can expect XML to be correctly formed and in malformed cases the silent =error= is not an issue. The service will keep on running in these cases.
-#+name: activities upload import
-#+begin_src haskell
-  import Application.TCX (processTcxUpload)
-  import Data.Maybe (fromJust)
-#+end_src
-
-** Looking at an activity
+** User looks at an activity
 *** Plotting the activity
 We'll be using an external =chart.js= library for plotting the data points. We'll amend =Web/View/Layout.hs= to include it.
-#+name: chart.js import
-#+begin_src html
+#+caption: Import plotting library
+#+begin_src html :noweb-ref Import JavaScript libraries
   <script src={assetPath "/chart.umd.min.js"}></script>
 #+end_src
 
-
-
-*** Fetching the activity
-We'll first have to fetch data from the database, namely the activity, laps, and trackpoints.
-#+name: show activity
-#+begin_src haskell
-  action ShowActivityAction { activityId } = do
-    activity <- fetch activityId
-    laps <- query @Lap
-            |> filterWhere (#activityId, unpackId activity.id)
-            |> fetch
-    tps <- mapM (\lap -> query @Trackpoint
-                         |> filterWhere (#lapId, unpackId lap.id)
-                         |> fetch
-                ) laps
-    render ShowView { .. }
-#+end_src
-
-#+name: ShowView definition
-#+begin_src haskell
-  data ShowView = ShowView { activity :: Activity
-                           , laps :: [Lap]
-                           , tps :: [[Trackpoint]]
-                           }
-#+end_src
-
-#+NAME: activities show hsx
-#+begin_src html
-  {breadcrumb}
-  <h1>Show Activity</h1>
-  <div style="width: 800px;"><canvas id="myChart"></canvas></div>
-  <p>{activity}</p>
-  <p>{laps}</p>
-  <p>{tps}</p>
-  <script>
-    var ctx = document.getElementById("myChart").getContext('2d');
++A filled line chart is the weapon of choice for the heart rate over time chart, since its integral (area) could be seen as useful (total heart beats).+ A scatter chart is used for simpler =tick= handling inside chart.js. The chart type is subject to change.
+#+caption: Plot heart rate
+#+begin_src js :noweb-ref Plot heart rate
+  <script data-hr={show heartRateList} data-time={show timeList}>
+    var ctx = document.getElementById("hrChart").getContext('2d');
     var myChart = new Chart(ctx, {
-      type: 'line',
+      type: 'scatter',
       data: {
-        labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange", "Teal"],
+        labels: JSON.parse(document.currentScript.dataset.time),
         datasets: [{
-          label: 'My First Dataset',
-          data: [65, 59, 80, 81, 56, 55, 40],
-          fill: false,
+          label: 'Heart rate',
+          data: JSON.parse(document.currentScript.dataset.hr),
+          fill: true,
           borderColor: 'rgb(75, 192, 192)',
           tension: 0.1
         }]
+      },
+      options: {
+        scales: {
+          y: {
+            suggestedMin: 0,
+            title: {
+              display: true,
+              text: 'BPM'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Seconds'
+            }
+          }
+        }
       }
     });
   </script>
-
+#+end_src
+#+caption: Map heart rate plot values
+#+begin_src haskell :noweb-ref Map heart rate plot values
+  heartRateList <- return $ map hr (concat tps)
+  timeList <- return [0..length (concat tps) - 1]
+#+end_src
+#+caption: Add heart rate plot values as parameters
+#+begin_src haskell :noweb-ref Add heart rate plot values as parameters
+  , heartRateList :: [Int]
+  , timeList :: [Int]
+#+end_src
+#+caption: Show plotted heart rate
+#+begin_src html :noweb-ref Show plotted heart rate
+  <div style="width: 800px;"><canvas id="hrChart"></canvas></div>
 #+end_src
 
-** Deleting an activity
+*TODO:* test the plot out by screenshotting a headless Chrome instance with =ob-html-chrome=. Blaze-kirjastolla saanee Web.View.Showista ulos dokumentin. Mikäli HSpec tms meiningit ei tuo siistimpää ratkaisua. =cs . responseBody= voi olla hyödyllinen =Html -> Text= tjsp. Ohjelman kontekstia ei kannata ajaa kun se on liian työlästä (ja selaimesta näkee helposti), mutta yksittäisiä elementtejä voisi testata kuitenkin muuten blankossa leiskassa. HSX substituutiot pitäisi pystyä jollain ilveellä tekemään kyllä että tässä on järkeä.
+
+*** Fetching activity data and showing it
+We'll first have to fetch data from the database, namely the =Activity=, =Laps=, and =Trackpoints=.
+#+caption: Query Activity and its children
+#+begin_src haskell :noweb-ref Query Activity and its children
+  queryActivityAndItsChildren activityId = do
+    activity <- fetch activityId
+    laps <- query @Lap
+            |> filterWhere (#activityId, unpackId activity.id)
+            |> orderBy #startTime
+            |> fetch
+    tps <- mapM (\lap -> query @Trackpoint
+                         |> filterWhere (#lapId, unpackId lap.id)
+                         |> orderBy #pointTime
+                         |> fetch
+                ) laps
+    return (activity, laps, tps)
+#+end_src
+
+#+caption: Show an activity
+#+begin_src haskell :noweb-ref Show an activity
+  action ShowActivityAction { activityId } = do
+    (activity, laps, tps) <- queryActivityAndItsChildren activityId
+    <<Map heart rate plot values>>
+    render ShowView { .. }
+#+end_src
+
+#+caption: ShowView definition
+#+begin_src haskell :noweb-ref ShowView definition
+  data ShowView = ShowView { activity :: Activity
+                           , laps :: [Lap]
+                           , tps :: [[Trackpoint]]
+                           <<Add heart rate plot values as parameters>>
+                           }
+#+end_src
+
+#+caption: Show detailed view of an activity
+#+begin_src html :noweb-ref Show detailed view of an activity
+  {breadcrumb}
+  <h1>Show Activity</h1>
+  <<Show plotted heart rate>>
+
+  <<Plot heart rate>>
+#+end_src
+
+#+caption: A View instance for showing an activity.
+#+begin_src haskell :tangle liikuntakirja/Web/View/Activities/Show.hs
+  module Web.View.Activities.Show where
+  import Web.View.Prelude
+
+  <<ShowView definition>>
+
+  instance View ShowView where
+    html ShowView { .. } =
+      [hsx|
+            <<Show detailed view of an activity>>
+            |]
+      where
+              breadcrumb = renderBreadcrumb
+                              [ breadcrumbLink "Activities" ActivitiesAction
+                              , breadcrumbText "Show Activity"
+                              ]
+#+end_src
+
+** User deletes an activity
+User has clicked delete button and confirmed deletion. Activity and its constituents will be remove from the database.
+#+caption: Delete an activity
+#+begin_src haskell :noweb-ref Delete an activity
+  action DeleteActivityAction { activityId } = do
+      (activity, laps, tps) <- queryActivityAndItsChildren activityId
+      deleteRecord activity
+      deleteRecords laps
+      deleteRecords (concat tps)
+      setSuccessMessage "Activity deleted"
+      redirectTo ActivitiesAction
+#+end_src
+
+** Developer is curious about boilerplate
+Every IHP program has a global configuration.
+#+caption: Configure IHP
+#+begin_src haskell :tangle liikuntakirja/Config/Config.hs
+  module Config where
+
+  import IHP.Prelude
+  import IHP.Environment
+  import IHP.FrameworkConfig
+  <<Import upload configuration>>
+
+  config :: ConfigBuilder
+  config = do
+    <<Set development or production flags>>
+    <<Allow uploads>>
+#+end_src
+
+#+caption: Web types
+#+begin_src haskell :tangle liikuntakirja/Web/Types.hs
+  module Web.Types where
+
+  import IHP.Prelude
+  import IHP.ModelSupport
+  import Generated.Types
+
+  data WebApplication = WebApplication deriving (Eq, Show)
+
+  data StaticController = WelcomeAction deriving (Eq, Show, Data)
+
+
+  <<Tcx types>>
+
+  <<Activities controller type constructors>>
+#+end_src
+
+#+caption: Universal helper functions
+#+begin_src haskell :tangle liikuntakirja/Application/Helper/Controller.hs
+  module Application.Helper.Controller where
+
+  import IHP.ControllerPrelude
+
+  -- Here you can add functions which are available in all your controllers
+#+end_src
+
+#+caption: Web routing
+#+begin_src haskell :tangle liikuntakirja/Web/Routes.hs
+  module Web.Routes where
+  import IHP.RouterPrelude
+  import Generated.Types
+  import Web.Types
+
+  -- Generator Marker
+  instance AutoRoute StaticController
+  <<Route Activities>>
+#+end_src
+
+#+caption: Master controller
+#+begin_src haskell :tangle liikuntakirja/Web/FrontController.hs
+  module Web.FrontController where
+
+  import IHP.RouterPrelude
+  import Web.Controller.Prelude
+  import Web.View.Layout (defaultLayout)
+
+  -- Controller Imports
+  import Web.Controller.Static
+  <<Import Activities>>
+
+  instance FrontController WebApplication where
+      controllers =
+          [ <<Set ActivitiesAction as front page>>
+          -- Generator Marker
+          <<Parse Activities route>>
+          ]
+
+  instance InitControllerContext WebApplication where
+      initContext = do
+          setLayout defaultLayout
+          initAutoRefresh
+#+end_src
+
+#+caption: SQL schema file
+#+begin_src sql :tangle liikuntakirja/Application/Schema.sql
+  -- Your database schema. Use the Schema Designer at http://localhost:8001/ to add some tables.
+  <<Tcx schema>>
+#+end_src
+
+*** Activities controller
+#+caption: Activities controller implementation
+#+begin_src haskell :tangle liikuntakirja/Web/Controller/Activities.hs
+  module Web.Controller.Activities where
+
+  import Web.Controller.Prelude
+  import Web.View.Activities.Index
+  import Web.View.Activities.New
+  import Web.View.Activities.Edit
+  import Web.View.Activities.Show
+
+  <<Import TCX conversion functions>>
+
+  instance Controller ActivitiesController where
+      <<Index Activities using IndexView>>
+
+      action NewActivityAction = do
+          let activity = newRecord
+          render NewView { .. }
+
+      <<Show an activity>>
+
+      <<Create Activity from uploaded TCX>>
+
+      <<Delete an activity>>
+
+  buildActivity activity = activity
+      |> fill @'["sport", "startTime", "planType", "deviceName"]
+
+  <<Convert TcxActivity into Activity and other database records>>
+
+  <<Query Activity and its children>>
+#+end_src
+
+#+caption: Route Activities
+#+begin_src haskell :noweb-ref Route Activities
+  instance AutoRoute ActivitiesController
+#+end_src
+
+#+caption: Import Activities
+#+begin_src haskell :noweb-ref Import Activities
+  import Web.Controller.Activities
+#+end_src
+
+#+caption: Parse Activities route
+#+begin_src haskell :noweb-ref Parse Activities route
+  , parseRoute @ActivitiesController
+#+end_src
+
+*** Javascript libraries, CSS stylesheets, meta tags and default layout
+#+caption: JavaScript libraries
+#+begin_src html :noweb-ref JavaScript libraries
+  {when isDevelopment devScripts}
+  <script src={assetPath "/vendor/jquery-3.6.0.slim.min.js"}></script>
+  <script src={assetPath "/vendor/timeago.js"}></script>
+  <script src={assetPath "/vendor/popper-2.11.6.min.js"}></script>
+  <script src={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.js"}></script>
+  <script src={assetPath "/vendor/flatpickr.js"}></script>
+  <script src={assetPath "/vendor/morphdom-umd.min.js"}></script>
+  <script src={assetPath "/vendor/turbolinks.js"}></script>
+  <script src={assetPath "/vendor/turbolinksInstantClick.js"}></script>
+  <script src={assetPath "/vendor/turbolinksMorphdom.js"}></script>
+  <script src={assetPath "/helpers.js"}></script>
+  <script src={assetPath "/ihp-auto-refresh.js"}></script>
+  <script src={assetPath "/app.js"}></script>
+  <<Import JavaScript libraries>>
+#+end_src
+
+#+caption: CSS stylesheets
+#+begin_src html :noweb-ref CSS stylesheets
+  <link rel="stylesheet" href={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.css"}/>
+  <link rel="stylesheet" href={assetPath "/vendor/flatpickr.min.css"}/>
+  <link rel="stylesheet" href={assetPath "/app.css"}/>
+#+end_src
+
+#+caption: Meta tags
+#+begin_src html :noweb-ref Meta tags
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+  <meta property="og:title" content="App"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="TODO"/>
+  <meta property="og:description" content="TODO"/>
+  {autoRefreshMeta}
+#+end_src
+
+#+caption: Development scripts
+#+begin_src html :noweb-ref Development scripts
+<script id="livereload-script" src={assetPath "/livereload.js"} data-ws={liveReloadWebsocketUrl}></script>
+#+end_src
+
+#+caption: Default page layout
+#+begin_src html :noweb-ref Default page layout
+  <!DOCTYPE html>
+  <html lang="en">
+      <head>
+          {metaTags}
+
+          {stylesheets}
+          {scripts}
+
+          <title>{pageTitleOrDefault "App"}</title>
+      </head>
+      <body>
+          <div class="container mt-4">
+              {renderFlashMessages}
+              {inner}
+          </div>
+      </body>
+  </html>
+#+end_src
+
+#+caption: The defaultLayout definition
+#+begin_src haskell :tangle liikuntakirja/Web/View/Layout.hs
+
+  module Web.View.Layout (defaultLayout, Html) where
+
+  import IHP.ViewPrelude
+  import IHP.Environment
+  import Generated.Types
+  import IHP.Controller.RequestContext
+  import Web.Types
+  import Web.Routes
+  import Application.Helper.View
+
+  defaultLayout :: Html -> Html
+  defaultLayout inner = [hsx|
+  <<Default page layout>>
+  |]
+
+  -- The 'assetPath' function used below appends a `?v=SOME_VERSION` to the static assets in production
+  -- This is useful to avoid users having old CSS and JS files in their browser cache once a new version is deployed
+  -- See https://ihp.digitallyinduced.com/Guide/assets.html for more details
+
+  stylesheets :: Html
+  stylesheets = [hsx|
+          <<CSS stylesheets>>
+      |]
+
+  scripts :: Html
+  scripts = [hsx|
+          <<JavaScript libraries>>
+      |]
+
+  devScripts :: Html
+  devScripts = [hsx|
+          <<Development scripts>>
+      |]
+
+  metaTags :: Html
+  metaTags = [hsx|
+      <<Meta tags>>
+  |]
+#+end_src
