@@ -7,6 +7,7 @@ The prologue covers setting up this notebook and the Liikuntakirja exercise trac
 ** Setup notebook environment
 The following can be executed for a temporary session environment for this notebook. Note that while =setq= is used for temporary effect (instead of =customize-variable=), =use-package= will install the packages for good. Code blocks like the one below are run with =C-c C-c=. For better readability, variable pitch text (=variable-pitch-mode=) and clearer headlines in style of [[https://zzamboni.org/post/beautifying-org-mode-in-emacs/][Zzamboni's Beautifying Org Mode in Emacs]] are recommended, but are excluded from this document for clarity. Regarding color schemes, e.g. =poet= theme might be easier on the eyes than the default.
 
+#+caption: Example Emacs configuration
 #+begin_src elisp :results silent
   ;; Don't confirm killing processes on exit
   (setq confirm-kill-processes nil)
@@ -148,19 +149,23 @@ Saving & tangling this file might induce a ~second long garbage collection opera
 #+end_src
 
 To run frontend visualizations, a Chromium binary is required.
+#+caption: Chromium binary
 #+begin_src sh :noweb-ref Chromium binary
   /usr/bin/chromium-browser
 #+end_src
 Following options are used when calling browser binary. DPI is 96 by default.
+#+caption: Chromium options
 #+begin_src sh :noweb-ref Chromium options
-  --headless --window-size=<<testing viewport size>> --disable-gpu --screenshot --run-all-compositor-stages-before-draw --virtual-time-budget=200
+  --headless --window-size=<<Testing viewport size>> --disable-gpu --screenshot --run-all-compositor-stages-before-draw --virtual-time-budget=200
 #+end_src
 The user's viewport is assumed as
-#+begin_src sh :noweb-ref testing viewport size
+#+caption: Testing viewport size
+#+begin_src sh :noweb-ref Testing viewport size
   1920x1200
 #+end_src
 
 ImageMagick's =convert= is used to scale down the visualizations for viewability
+#+caption: Post-process screenshot
 #+begin_src sh :noweb-ref Post-process screenshot
   convert screenshot.png -resize <<Visualization size>>
 #+end_src
@@ -170,6 +175,7 @@ Availability can be checked with =which=.
 #+end_src
 
 Visualizations using an image file will be downscaled to following format
+#+caption: Visualization size
 #+begin_src sh :noweb-ref Visualization size
   640x400
 #+end_src
@@ -191,14 +197,15 @@ A =liikuntakirja.html= can be produced in the working directory and opened in yo
 However, this notebook might be better read via Emacs' interface, with things like =variable-pitch-mode=, =org-sidebar=, and a suitable theme set.
 
 ** Install IHP prerequisites
-[[https://ihp.digitallyinduced.com/][Integrated Haskell Platform]] is a fairly opinionated batteries-included web framework. It follows an MVC design and includes live reloading plus reproducible development and deployment environments (a sandbox). PostgreSQL is used out of the box for the model and is installed inside the application's sandbox. The sandbox is done using Nix. Nix depends on Git, Curl, Make, and Direnv. These steps have been derived from the [[https://ihp.digitallyinduced.com/Guide/installation.html][IHP guide]].
+[[https://ihp.digitallyinduced.com/][Integrated Haskell Platform]] is a fairly opinionated batteries-included web framework. It follows an MVC design and includes live reloading plus reproducible development and deployment environments (a sandbox). PostgreSQL is used out of the box for the model and is installed inside the application's sandbox. The sandbox is done using Nix. Nix depends on Git, Curl, Make, and Direnv.
+
+These steps have been derived from the [[https://ihp.digitallyinduced.com/Guide/installation.html][IHP guide]].
 #+caption: An example shell command for Dnf package manager with Fedora repositories.
 #+begin_src shell
   sudo dnf install git curl make direnv
 #+end_src
 
 Then we can install Nix. /Note: The Nix installer appends your terminal emulator configuration to enable Direnv support./
-#+caption: Nix install script
 #+begin_src shell :results silent :dir .
   curl -L https://nixos.org/nix/install | sh
 #+end_src
@@ -206,7 +213,7 @@ Then we can install Nix. /Note: The Nix installer appends your terminal emulator
 After running the install script, shell environment has to be reloaded. To brute force this, restart Emacs and the shell session it's running in. Sourcing your appended terminal emulator configuration can be enough if you know what you are doing.
 
 ** Setup IHP and the initial project
-IHP uses a web application creation script called =ihp-new= found in the Nix repositories.
+IHP uses a web application creation script they call =ihp-new= found in the Nix repositories.
 #+begin_src shell :results silent :dir .
   nix-env --install ihp-new
 #+end_src
@@ -214,7 +221,6 @@ IHP uses a web application creation script called =ihp-new= found in the Nix rep
 However, IHP uses Nix "flake" architecture, which requires special handling when used inside git repositories like the one this notebook is in ([[https://github.com/NixOS/nix/issues/6642][nix issue #6642]], [[https://github.com/digitallyinduced/ihp/issues/1787][ihp issue #1787]]). To work around this issue, a separate git repository has to be created for the program itself. As of writing this, Nix repositories still had an outdated =ihp-new= lacking automatic git init, so a newer =ihp-new= (commit 016a14d) from IHP repository is bundled with this notebook. The newer one will initialize git repository using default credentials and options.
 
 Setting an IHP project up for the first time can take a long time, is verbose, and asks if precompiled binaries can be used. Thus, it may be preferable to run it in a separate terminal without piping =yes=. If using precompiled binaries is fine and you don't want to see progress bars, it can be run inside the notebook:
-#+caption: Project creation with the bundled ihp-new script
 #+begin_src shell :results silent :dir .
   yes | ./ihp-new liikuntakirja
 #+end_src
@@ -459,7 +465,7 @@ The user is happy with a unified single-page interface. An exercise session can 
 
 User wants personalized reports about how the metered heart rates matched the physical stress derived from their age. Per-activity, user wants to see their heart rate and possible moving speed, with total distance, and maximum and average heart rate over the activity.
 
-#+caption: Interface idea received from client
+#+caption: Client's UI mock-up
 #+name: interface mock-up
 [[./assets/mockup.png]]
 
@@ -738,6 +744,7 @@ The unified interface is laid out using simple HTML and Bootstrap CSS classes.
   <h1>Showing a {activity.planType} from {activity.startTime}</h1>
 #+end_src
 
+#+caption: Lay out navigation bar
 #+begin_src html :noweb-ref Lay out navigation bar
   {links}
 #+end_src
@@ -748,9 +755,6 @@ The unified interface can then be seen when loading =/Activities=
   <<Post-process screenshot>> visualizations/activities_visualization.png
 #+end_src
 
-#+RESULTS:
-[[file:./visualizations/activities_visualization.png]]
-
 ** User edits their personal health information
 User wants to input age for physical stress analysis. For now, it is left to the user to adjust this when looking at older activities. In a future version, user could put in their birthday and each activity will be adjusted for it in respect to activity time.
 
@@ -759,6 +763,7 @@ User wants to input age for physical stress analysis. For now, it is left to the
 
 *** Propositions
 We'll make a dedicated tests file for handling personal health information. We'll call the base model for this information =HealthInformation=.
+#+caption: Test/Controller/HealthInformationsSpec.hs
 #+begin_src haskell :tangle liikuntakirja/Test/Controller/HealthInformationsSpec.hs
   module Test.Controller.HealthInformationsSpec where
 
@@ -794,10 +799,15 @@ We'll make a dedicated tests file for handling personal health information. We'l
     |> createRecord
 
   defaultAge = <<Default user age>> :: Int
+
+  <<Test HealthInformation model>>
+
+  <<Test HealthInformationsController>>
 #+end_src
 
 First off, we need to model user's personal health information, namely age. User is not interested in calories burned or other weight/height-related information. There will ever only be one row in the table that is always inserted when setting up database. Program cannot run without the row.
-#+begin_src haskell :tangle liikuntakirja/Test/Controller/HealthInformationsSpec.hs
+#+caption: Test HealthInformation model
+#+begin_src haskell :noweb-ref Test HealthInformation model
   -- testModel :: Spec
   testModel = do
     describe "HealthInformations" $ do
@@ -806,12 +816,14 @@ First off, we need to model user's personal health information, namely age. User
         health.age `shouldSatisfy` (\x -> x >= 0 && x <= 120)
 
 #+end_src
+#+caption: Call HealthInformation unit tests
 #+begin_src haskell :noweb-ref Call HealthInformation unit tests
   testModel
 #+end_src
 
 The other thing we need is an Edit action which shows an editing view, and an Update action that updates database. We'll also have to agree on a default age for the user.
-#+begin_src haskell :tangle liikuntakirja/Test/Controller/HealthInformationsSpec.hs
+#+caption: Test HealthInformationsController
+#+begin_src haskell :noweb-ref Test HealthInformationsController
   -- testController :: Spec
   testController = do
     describe "HealthInformationsController" $ do
@@ -824,35 +836,42 @@ The other thing we need is an Edit action which shows an editing view, and an Up
         updatedHealth <- query @HealthInformation |> fetchOne
         updatedHealth.age `shouldBe` (defaultAge + 20)
 #+end_src
+#+caption: Call HealthInformation unit tests
 #+begin_src haskell :noweb-ref Call HealthInformation unit tests
   testController
 #+end_src
 
+#+caption: Default user age
 #+begin_src haskell :noweb-ref Default user age
   30
 #+end_src
 
 Lastly, we'll add this module to the main unit testing module
+#+caption: Unit test modules
 #+begin_src haskell :noweb-ref Unit test modules
   import Test.Controller.HealthInformationsSpec
 #+end_src
+#+caption: Unit test modules
 #+begin_src haskell :noweb-ref Unit test module functions
   Test.Controller.HealthInformationsSpec.tests
 #+end_src
 
 *** Implementation
 Let's set up our model first. We need a very simple table with only one column, and an INSERT statement into the fixtures file. Technically we don't need =id=, but the IHP architecture expects it (and maybe we'll have e.g. multiple users in the future).
+#+caption: HealthInformation schema
 #+begin_src sql :noweb-ref HealthInformation schema
   CREATE TABLE health_informations (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
       age INT NOT NULL
   );
 #+end_src
+#+caption: Insert default HealthInformation row
 #+begin_src sql :noweb-ref Insert default HealthInformation row
   INSERT INTO health_informations (age) VALUES (<<Default user age>>);
 #+end_src
 
 With the model set, we'll set up the controller.
+#+caption: Web/Controller/HealthInformations.hs
 #+begin_src haskell :tangle liikuntakirja/Web/Controller/HealthInformations.hs
   module Web.Controller.HealthInformations where
 
@@ -876,6 +895,7 @@ With the model set, we'll set up the controller.
                       redirectTo ActivitiesAction
 #+end_src
 
+#+caption: Type HealthInformationController
 #+begin_src haskell :noweb-ref Type HealthInformationController
   data HealthInformationsController
       = EditHealthInformationAction
@@ -883,18 +903,21 @@ With the model set, we'll set up the controller.
       deriving (Eq, Show, Data)
 #+end_src
 
+#+caption: Controller routing instances
 #+begin_src haskell :noweb-ref Controller routing instances
   instance AutoRoute HealthInformationsController
 #+end_src
-
+#+caption: Import controller actions
 #+begin_src haskell :noweb-ref Import controller actions
   import Web.Controller.HealthInformations
 #+end_src
+#+caption: Parse controller routes
 #+begin_src haskell :noweb-ref Parse controller routes
   , parseRoute @HealthInformationsController
 #+end_src
 
 And finally the =EditView= the controller makes for manipulating the model.
+#+caption: Web/View/HealthInformations/Edit.hs
 #+begin_src haskell :tangle liikuntakirja/Web/View/HealthInformations/Edit.hs
   module Web.View.HealthInformations.Edit where
   import Web.View.Prelude
@@ -917,12 +940,14 @@ And finally the =EditView= the controller makes for manipulating the model.
   |]
 #+end_src
 
+#+caption: Lay out health information editing view
 #+begin_src html :noweb-ref Lay out health information editing view
   {breadcrumb}
   <h1>Edit age</h1>
   {renderForm healthInformation}
 #+end_src
 
+#+caption: Lay out health information editing form
 #+begin_src html :noweb-ref Lay out health information editing form
   {textField #age}
   {submitButton}
@@ -933,36 +958,12 @@ All HSpec tests should now be good:
   :l Test/Main
   hspec $ Test.Controller.HealthInformationsSpec.tests
 #+end_src
-#+RESULTS:
-#+begin_example
-HealthInformationsController
-CREATE EXTENSION
-CREATE TYPE
-CREATE FUNCTION
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-  should start with one row [v]
-HealthInformations
-  models age [v]
-HealthInformationsController
-  calling EditHealthInformationAction renders an editing form [v]
-  calling UpdateHealthInformationAction updates HealthInformation [v]
-HealthInformationsController
-  should finish with one row [v]
-
-Finished in 0.8797 seconds
-5 examples, 0 failures
-#+end_example
 
 The settings interface should look like the mockup in the user story:
 #+begin_src sh :results file graphics :file "./visualizations/editsettings_visualization.png" :dir .
   <<Chromium binary>> <<Chromium options>> "http://localhost:8000/EditHealthInformation"
   <<Post-process screenshot>> visualizations/editsettings_visualization.png
 #+end_src
-#+RESULTS:
-[[file:./visualizations/editsettings_visualization.png]]
 
 
 ** User uploads smartwatch data into Liikuntakirja
@@ -988,7 +989,7 @@ Since parsing TCX files can be used in other programs too, we make it into a sep
 
   <<TCX to record unit test>>
 #+end_src
-#+caption: Unit test modules
+#+caption: Unit test module functions
 #+begin_src haskell :noweb-ref Unit test module functions
   Test.Application.TCXSpec.tests
 #+end_src
@@ -1031,11 +1032,12 @@ In the second step we will map and insert the intermediate record into the datab
         tpCount <- query @Trackpoint |> fetchCount
         tpCount `shouldBe` 5
 #+end_src
+#+caption: ActivitiesSpec test function calls
 #+begin_src haskell :noweb-ref ActivitiesSpec test function calls
   testTcxUpload
 #+end_src
-*** Implementation
 
+*** Implementation
 To allow user uploads to =static/= directory, we'll have to import a configuration and some flags in =Config.hs= defined at Configure IHP
 #+caption: Import upload configuration
 #+begin_src haskell :noweb-ref Import upload configuration
@@ -1064,7 +1066,7 @@ Once the user has browsed for a file and clicks "Upload", we will pass the uploa
 #+end_src
 
 The TCX file we've received is an XML-formatted file. In the file, Trackpoints are of most interest as it keeps track of heart rate, speed and time, but Lap and Activity have some useful metadata too. We have to expect that occasionally any other field than =Time= can be missing, as even heart rate might not be included in first couple Trackpoint nodes. An example TCX produced by a 5-second strength training workout.
-#+caption: TCX file for a strength training workout
+#+caption: Test/test.strength.tcx
 #+begin_src xml :tangle liikuntakirja/Test/test.strength.tcx
 <?xml version="1.0" encoding="UTF-8"?>
 <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
@@ -1148,7 +1150,7 @@ The TCX file we've received is an XML-formatted file. In the file, Trackpoints a
 #+end_src
 
 Another truncated example of a walking workout. Note that sport is "Other" regardless if it is strength training (previous case) or walking (this case). Superfluous and identical with previous case, Author and Creator parts were cut out in this case to save your eyes. In the walking workout there is a peculiar edge case: as the watch auto-laps every 1000.0m, the last Lap will both lack some fields like heart rate statistics and have zero calories and cadence. As with previous case and this case, the XML's have been cut out from larger XML files and are not 100% authentic and shouldn't be taken as complete gospel.
-#+caption: TCX file for a walking workout
+#+caption: Test/test.walking.tcx
 #+begin_src xml :tangle liikuntakirja/Test/test.walking.tcx
   <?xml version="1.0" encoding="UTF-8"?>
   <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
@@ -1482,7 +1484,7 @@ Since there are no libraries available for directly extracting the TCX format, w
 #+begin_src nix :noweb-ref Haskell dependencies
 xml-conduit
 #+end_src
-#+caption: Application.TCX prologue
+#+caption: Application/TCX.hs
 #+begin_src haskell :tangle liikuntakirja/Application/TCX.hs
   {-# LANGUAGE OverloadedStrings #-}
 
@@ -1643,6 +1645,7 @@ In this part of the story, we'll have to consider how to visualize the data for 
 The charts and table should look like in [[interface mock-up][the united interface mock-up]].
 
 To fetch and sculpt the required data properly, these tests should pass.
+#+caption: Test/Controller/ActivitiesSpec.hs
 #+begin_src haskell :tangle liikuntakirja/Test/Controller/ActivitiesSpec.hs
   testChartData = do
     describe "ActivitiesController" $ do
@@ -1679,6 +1682,7 @@ To fetch and sculpt the required data properly, these tests should pass.
       createFauxActivity =
         fromJust . head <$> processTcxFile "Test/test.strength.tcx" >>= insertTcxActivity
 #+end_src
+#+caption: ActivitiesSpec test function calls
 #+begin_src haskell :noweb-ref ActivitiesSpec test function calls
   testChartData
 #+end_src
@@ -1686,12 +1690,13 @@ To fetch and sculpt the required data properly, these tests should pass.
 *** Implementation
 **** Plotting the activity
 We'll be using an external =chart.js= library for plotting the data points. We'll amend =Web/View/Layout.hs= to include it.
-#+caption: Import plotting library
+#+caption: Import JavaScript libraries
 #+begin_src html :noweb-ref Import JavaScript libraries
   <script src={assetPath "/chart.umd.min.js"}></script>
 #+end_src
 
 There are 5 different data types to chart over time. Ideally these would fit in a single chart. Heart rate and heart rate zones, speed and cadence, and laps are quite interrelated. We will get a set of labels (time), and matching datasets of the 5 data types. Let's start with the main plotting JavaScript script block. We'll fill in labels and dataset data later using another client-side block, we're now more concerned about how the data should be presented.
+#+caption: Plot selected activity
 #+begin_src js :noweb-ref Plot selected activity
   <script id="activityPlotter"
   data-heartrate={cdHeartRate chartData}
@@ -1736,6 +1741,7 @@ There are 5 different data types to chart over time. Ideally these would fit in 
 #+end_src
 
 To plot and scale heart rates, following structures should do:
+#+caption: Plot heart rate
 #+begin_src js :noweb-ref Plot heart rate
   {
     type: 'line',
@@ -1749,6 +1755,7 @@ To plot and scale heart rates, following structures should do:
   }
 #+end_src
 To visualize the user's descent into old age, we'll always keep the maximum heart rate scale at the theoretical 20yo's maximum of 200 BPM. A common maximum is needed to visualize differences between exercises.
+#+caption: Scale heart rate
 #+begin_src js :noweb-ref Scale heart rate
   bpmY: {
     min: 0,
@@ -1765,6 +1772,7 @@ To visualize the user's descent into old age, we'll always keep the maximum hear
 #+end_src
 
 The heart rate zones require a bit of a different approach. Ideally we would paint Y axis partitioned into zones with respective colors, but straight lines delineating the zones should do also. We need to make 5 distinct zones.
+#+caption: Plot heart rate zones
 #+begin_src js :noweb-ref Plot heart rate zones
   {
     type: 'line',
@@ -1846,6 +1854,7 @@ To avoid littering the legends table, we will filter out the useless heart rate 
 #+end_src
 
 Speed is similar to heart rate, +but uses a different axis+ all use the same 0-200 axis for simplicity of a kind. 200 km/h or rpm seems like a sensible maximum for both speed and cadence to have them visually separate from heart rate and each other, but still be distinguishable even at around 5 km/h.
+#+caption: Plot speed
 #+begin_src js :noweb-ref Plot speed
   {
     type: 'line',
@@ -1859,6 +1868,7 @@ Speed is similar to heart rate, +but uses a different axis+ all use the same 0-2
   }
 #+end_src
 The unused speed axis:
+#+caption: Scale speed
 #+begin_src js :noweb-ref Scale speed
   speedY: {
     min: 0,
@@ -1872,6 +1882,7 @@ The unused speed axis:
 #+end_src
 
 Cadence goes in with speed.
+#+caption: Plot cadence
 #+begin_src js :noweb-ref Plot cadence
   {
     type: 'line',
@@ -1886,6 +1897,7 @@ Cadence goes in with speed.
 #+end_src
 
 Finally, laps will be (for now) implemented with simple dots using a scatter type. We'll make the dots appear on top of the heart rate dataset, as it is found on all activities.
+#+caption: Plot laps
 #+begin_src js :noweb-ref Plot laps
   {
     type: 'scatter',
@@ -1902,6 +1914,7 @@ Finally, laps will be (for now) implemented with simple dots using a scatter typ
 #+end_src
 
 Everything above then is shown as a function of time. It's obvious from labels what it is, so no separate title is required.
+#+caption: Scale time
 #+begin_src js :noweb-ref Scale time
   x: {
     min: 0,
@@ -1916,11 +1929,13 @@ Everything above then is shown as a function of time. It's obvious from labels w
 #+end_src
 
 This will then show up on a canvas.
+#+caption: Show plotted activity
 #+begin_src html :noweb-ref Show plotted activity
   <div style="position: relative;"><canvas id="activityChart"></canvas></div>
 #+end_src
 
 We can then put it all together
+#+caption: Lay out selected activity
 #+begin_src html :noweb-ref Lay out selected activity
   <<Show plotted activity>>
   <<Plot selected activity>>
@@ -1929,6 +1944,7 @@ We can then put it all together
 Frontend will receive the data in a JSON parseable format. The chart is filled & updated with data clientside due to some quirks regarding the single-page nature of the frontend. Fully serverside, the chart would have trouble updating when moving between activities, even if the data-fields in <script> would update.
 
 IHP has a premade JS function that runs on every page load and as turbolinks change it:
+#+caption: static/app.js
 #+name: Run Javascript on page load
 #+begin_src js :tangle liikuntakirja/static/app.js
   $(document).on('ready turbolinks:load', function () {
@@ -1938,6 +1954,7 @@ IHP has a premade JS function that runs on every page load and as turbolinks cha
 #+end_src
 
 We'll then update the chart:
+#+caption: Update chart
 #+begin_src js :noweb-ref Update chart
   var plotter = document.getElementById('activityPlotter');
   aPChart.data.datasets[0].data = JSON.parse(plotter.dataset.heartrate);
@@ -1956,20 +1973,17 @@ We'll then update the chart:
 #+end_src
 
 We should now have a graphical presentation of the data done.
-#+caption: Plotted activity within the unified interface
 #+begin_src sh :results file graphics :file "./visualizations/ui_visualization.png" :dir .
   <<Chromium binary>> <<Chromium options>> "http://localhost:8000"
   <<Post-process screenshot>> visualizations/ui_visualization.png
 #+end_src
-
-#+RESULTS:
-[[file:./visualizations/ui_visualization.png]]
 
 Next we'll transform the model data for the frontend.
 
 **** Sculpting the data
 
 We desperately need a type for the JSONified chart data
+#+caption: Type ChartData
 #+begin_src haskell :noweb-ref Type ChartData
   data ChartData = ChartData
     { cdHeartRate :: Text
@@ -1983,6 +1997,7 @@ We desperately need a type for the JSONified chart data
 #+end_src
 
 We can then start working on sculpting the data. We can assume that any sequential pair of Trackpoints  will have 1-second interval between them. Since Haskell lists will read as JSON and the coordinate JSON is easy to roll by hand, we can avoid using external JSON libraries. We'll start off with heart rate. All integers will turn into floats during sculpting. The resulting data will have each list item represent a 10 second period. =heartRate= is used in calculating lap indicators, so we'll =show= it when constructing =ChartData=.
+#+caption: Sculpt Activity into ChartData
 #+begin_src haskell :noweb-ref Sculpt Activity into ChartData
   chartActivityData :: HealthInformation -> (Maybe Activity, [Lap], [[Trackpoint]]) -> Maybe ChartData
   chartActivityData _          (Nothing, _, _) = Nothing
@@ -1998,6 +2013,7 @@ We can then start working on sculpting the data. We can assume that any sequenti
 #+end_src
 
 Average over 10 seconds, but last average might average over only 1-9 seconds.
+#+caption: avgOver10s
 #+begin_src haskell :noweb-ref avgOver10s
   avgOver10s :: [Float] -> [Float]
   avgOver10s x =
@@ -2008,6 +2024,7 @@ Average over 10 seconds, but last average might average over only 1-9 seconds.
 #+end_src
 
 Then we'll work on heart rate zones. They have a simple spread based on deciles and a general rule on maximum heart rate being 220 minus your age BPM. As the zones are drawn as overlapping blocks, we'll start the 90% zone at 100%, 80% at 90%, etc.
+#+caption: Sculpt Activity into ChartData zones
 #+begin_src haskell :noweb-ref Sculpt Activity into ChartData zones
       topHeartRate = fromIntegral $ 220 - age healthInfo
       heartRateZones = (show . replicate (length heartRate) . round $ topHeartRate * 0.6,
@@ -2018,11 +2035,13 @@ Then we'll work on heart rate zones. They have a simple spread based on deciles 
 #+end_src
 
 Speed requires some differential calculations. Cadence not so much.
+#+caption: Sculpt Activity into ChartData speed and cadence
 #+begin_src haskell :noweb-ref Sculpt Activity into ChartData speed and cadence
       speed = show . avgOver10s . deriveKmhSpeedFromDistance $ concat tps
       cadence = show . avgOver10s $ map (\tp -> fromIntegral $ fromMaybe 0 tp.cadence) . concat $ tps
 #+end_src
 
+#+caption: deriveKmhSpeedFromDistance
 #+begin_src haskell :noweb-ref deriveKmhSpeedFromDistance
   deriveKmhSpeedFromDistance :: [Trackpoint] -> [Float]
   deriveKmhSpeedFromDistance (tp:[]) = []
@@ -2036,11 +2055,13 @@ Speed requires some differential calculations. Cadence not so much.
 #+end_src
 
 Now, laps, time, and total time will require dealing with =Data.Time=. We will have to calculate =NominalDiffTimes= from =UTCTimes= and put them on the chart.
+#+caption: Import Data.Time for sculpting ChartData
 #+begin_src haskell :noweb-ref Import Data.Time for sculpting ChartData
   import Data.Time.Clock (diffUTCTime, nominalDiffTimeToSeconds)
 #+end_src
 
 With laps we need label for X axis and heart rate as of new lap for Y. X coordinate is the difference between activity and lap starts in seconds divided by 5 & nicely formatted. We get the label from =time= we're handling next. Y coordinate is current heart rate at that time. We don't need to know when the first lap started. We also need a more complex JSON than what the Show typeclass produces.
+#+caption: Sculpt Activity into ChartData laps
 #+begin_src haskell :noweb-ref Sculpt Activity into ChartData laps
   lapXCoordinate lap = floor (diffUTCTime (lap.startTime) (activity.startTime)) `div` 10 :: Int
   newLaps = (\str -> T.concat["[", str, "]"]) . intercalate "," . map pack . drop 1 $
@@ -2049,6 +2070,7 @@ With laps we need label for X axis and heart rate as of new lap for Y. X coordin
 #+end_src
 
 Time is then time.. averaged over 10 seconds (4.5, 14.5, .. as first trackpoint is at 0 seconds) But we'll cheat a bit and =floor= + remove 4 seconds from, so the chart starts at 00.00 with some nice formatting. =time= is used for =totalTime=, so it's =show='d in the constructor.
+#+caption: Sculpt Activity into ChartData time
 #+begin_src haskell :noweb-ref Sculpt Activity into ChartData time
   zeroPad t = pack (replicate (2 - length (unpack t)) '0' ++ (unpack t))
   time = map (\t -> zeroPad (show (t `div` 60)) ++ ":"
@@ -2057,6 +2079,7 @@ Time is then time.. averaged over 10 seconds (4.5, 14.5, .. as first trackpoint 
 #+end_src
 
 Total time is just the length of the X axis in this case.
+#+caption: Sculpt Activity into ChartData end
 #+begin_src haskell :noweb-ref Sculpt Activity into ChartData end
       totalTime = show . length $ time
   in Just $ ChartData (show heartRate) heartRateZones speed cadence newLaps (show time) totalTime
@@ -2086,6 +2109,7 @@ The data for sculpting is then fetched from the database.
 #+end_src
 
 Everything in the backend is pulled together in =ShowActivityAction=
+#+caption: Show an activity
 #+begin_src haskell :noweb-ref Show an activity
   action ShowActivityAction { activityId } = do
     (selectedActivity, laps, tps) <- activityId |> fetchOneOrNothing >>= queryActivityAndItsChildren
@@ -2106,24 +2130,6 @@ All propositions should now pass.
   :l Test/Controller/ActivitiesSpec.hs
   hspec $ aroundAll (withIHPApp WebApplication config) $ testChartData
 #+end_src
-
-#+RESULTS:
-#+begin_example
-ActivitiesController
-CREATE EXTENSION
-CREATE TYPE
-CREATE FUNCTION
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-  fetches data [v]
-  sculpts the data as intended for charts [v]
-  shows a selected activity [v]
-
-Finished in 0.9186 seconds
-3 examples, 0 failures
-#+end_example
 
 
 ** User deletes an activity
