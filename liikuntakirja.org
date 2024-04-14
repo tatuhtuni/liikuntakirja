@@ -2,12 +2,12 @@
 
 * Developer's prologue
 #+PROPERTY:header-args :dir . :mkdirp yes :exports code :noweb no-export :results silent :eval never-export
-The prologue covers setting up this notebook and the Liikuntakirja exercise tracker program contained within.
+The prologue covers setting up this notebook and the Liikuntakirja exercise tracker program contained within. This notebook and its program has some special requirements that need to be accounted for.
 
 ** Setup notebook environment
 The following can be executed for a temporary session environment for this notebook. Note that while =setq= is used for temporary effect (instead of =customize-variable=), =use-package= will install the packages for good. Code blocks like the one below are run with =C-c C-c=. For better readability, variable pitch text (=variable-pitch-mode=) and clearer headlines in style of [[https://zzamboni.org/post/beautifying-org-mode-in-emacs/][Zzamboni's Beautifying Org Mode in Emacs]] are recommended, but are excluded from this document for clarity. Regarding color schemes, e.g. =poet= theme might be easier on the eyes than the default.
 
-#+begin_src elisp
+#+begin_src elisp :results silent
   ;; Don't confirm killing processes on exit
   (setq confirm-kill-processes nil)
 
@@ -133,6 +133,11 @@ The following can be executed for a temporary session environment for this noteb
   (scroll-bar-mode 1)
 #+end_src
 
+Every block that /does/ have =results= header can be executed. If you don't want to be yes/no prompted every time you execute a block, you can disable the prompt by
+#+begin_src elisp :results silent
+  (setq org-confirm-babel-evaluate nil)
+#+end_src
+
 Saving & tangling this file might induce a ~second long garbage collection operation as it makes ~50MB worth of data structures. Garbage collection threshold should be raised to e.g. 512 megabytes from the default ~800 kilobytes. Exact number depends on how much RAM is disposable while the Emacs process is running.
 #+begin_src elisp :results silent
   (setq gc-cons-threshold (* 512 1024 1024)) ;; 512 MB
@@ -150,7 +155,7 @@ Following options are used when calling browser binary. DPI is 96 by default.
 #+begin_src sh :noweb-ref Chromium options
   --headless --window-size=<<testing viewport size>> --disable-gpu --screenshot --run-all-compositor-stages-before-draw --virtual-time-budget=200
 #+end_src
-The user's viewport is assumed to be following.
+The user's viewport is assumed as
 #+begin_src sh :noweb-ref testing viewport size
   1920x1200
 #+end_src
@@ -166,7 +171,7 @@ Availability can be checked with =which=.
 
 Visualizations using an image file will be downscaled to following format
 #+begin_src sh :noweb-ref Visualization size
-  960x600
+  640x400
 #+end_src
 
 To see the visualizations embedded in the notebook, inline images should be enabled.
@@ -174,11 +179,11 @@ To see the visualizations embedded in the notebook, inline images should be enab
   (org-toggle-inline-images)
 #+end_src
 
-If using Org 9.6 or earlier (=M-x org-version=), the visualization blocks will error when using indirect buffers (usually via =org-sidebar)=. This is fixed in yet-to-be-released Org 9.7 ([[https://git.savannah.gnu.org/cgit/emacs/org-mode.git/commit/lisp/ob-core.el?id=c730caf51][commit c730caf51]]) and as a one-liner fix can also be hackily patched by hand in =ob-core.el= (not =.elc=) usually found in =/usr/share/emacs/[version number]/lisp/org/=.
+If using Org 9.6 or earlier (=M-x org-version=), executing blocks that produce graphics will error when using indirect buffers (usually via =org-sidebar)=. This is fixed in yet-to-be-released Org 9.7 ([[https://git.savannah.gnu.org/cgit/emacs/org-mode.git/commit/lisp/ob-core.el?id=c730caf51][commit c730caf51]]). As a one-liner fix, it can also be hackily patched by hand in =ob-core.el= (not =.elc=) usually found in =/usr/share/emacs/[version number]/lisp/org/=.
 
 ** Weaving this notebook
 A =liikuntakirja.html= can be produced in the working directory and opened in your default browser with =C-c C-e h o=. For syntax highlighting, =htmlize= can be installed, which automatically hooks on to the HTML export function.
-#+begin_src elisp
+#+begin_src elisp :results silent
   (use-package htmlize
     :ensure t)
 #+end_src
@@ -218,11 +223,12 @@ With the project set up, this document should now be tangled with  =C-c C-v t= (
 
 The following assets are needed inside the program.
 #+begin_src shell :results silent :dir .
-  cp ./assets/chart.umd.min.js ./liikuntakirja/static/ # chart.js frontend plotting library
+  wget https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js -o ./liikuntakirja/static/ # frontend plotting library
+
 #+end_src
 
 If you intend to edit the code, setting the editor to save on unfocus and to tangle on save smoothens the experience. Combined with IHP's reactive coding (autoreloading), it tightens up the interactive loop.
-#+begin_src elisp
+#+begin_src elisp :results silent
   ;; Tangle on save
   (add-hook 'org-mode-hook
             (lambda () (add-hook 'after-save-hook #'org-babel-tangle
@@ -303,7 +309,7 @@ Any external programs or Haskell libraries should be added into the =flake.nix= 
 #+end_src
 
 Everything should now be set for both running the program and the untangled blocks of code in this notebook. The following block can be used to test if the environment is set up properly. In this case we'll show the whole output and not just the evaluated result, so any compilation errors can be easily seen.
-#+begin_src haskell :dir ./liikuntakirja :results output replace
+#+begin_src haskell :results output replace :dir ./liikuntakirja
   :t config
 #+end_src
 
@@ -323,20 +329,20 @@ For deployment, following settings are then used:
 #+end_src
 
 The program is run either by running =devenv up= or the =start= script. The front page should open up in your default browser (via =xdg-open=) once the web server has started. [[http://localhost:8000/][The user interfacing part]] runs on port 8000 and [[http://localhost:8001/][the IHP  IDE]] on 8001. The program can be run in a separate session inside this notebook environment:
-#+begin_src shell :async yes :session *ihp* :dir ./liikuntakirja :results silent
+#+begin_src shell :results silent :async yes :session *ihp* :dir ./liikuntakirja
   ./start
 #+end_src
 
 Any tests in this notebook will require a running Liikuntakirja instance, as they use its database interface.
 
 *This part is not used currently:* For running any =psql= prompts in the notebook, =*psql*= should be set up by executing the next block. It works around a =psql=-related "o: command not found" =ob-shell= parsing issue. Environment variables like LESS could also be set per-command.
-#+begin_src sh :session *psql* :dir ./liikuntakirja :results silent
+#+begin_src sh :results silent :session *psql* :dir ./liikuntakirja
   export LESS=eFRX
   psql --host=$(pwd)/build/db app -c "\q"
 #+end_src
 
 If there are database issues (if the schema has been changed after first running =start=), database structure can be reformatted. Either format (migrate) it graphically in [[http://localhost:8001/][the IHP IDE]] or run:
-#+begin_src sh :session *psql* :dir ./liikuntakirja :results silent
+#+begin_src sh :results silent :session *psql* :dir ./liikuntakirja
   make db
 #+end_src
 
@@ -414,6 +420,8 @@ Liikuntakirja is mostly actuated via the =Activities= controller.
                        |> fetchCount
               count `shouldBe` 0
           <<ActivitiesSpec test function calls>>
+
+  <<Test inserting a record provided by Application.TCX into database>>
 #+end_src
 
 With the framework set up and the program running in the background (most unit tests require a running PostgreSQL instance), we can now run all the tests by loading Main and running =main=.
@@ -483,7 +491,7 @@ All these actions correspond to a function in =Controller ActivitiesController= 
 #+end_src
 
 ** User accesses Liikuntakirja via browser
-We'll have to set the =Action= that's triggered on loading =/=.
+We'll have to set the =Action= that's triggered on loading =/=. This goes into the main =Web/Routes.hs= file.
 #+caption: Set ActivitiesAction as front page
 #+begin_src haskell :noweb-ref Set ActivitiesAction as front page
   startPage ActivitiesAction
@@ -501,7 +509,7 @@ We'll have to set the =Action= that's triggered on loading =/=.
     render IndexView { .. }
 #+end_src
 
-=IndexView= will then show the main interface with the found activity and all activities indexed. IHP uses JSX-like HSX syntax. HSX enables embedding Haskell bindings inside page layouts. Since HSX contents are not Haskell, they have been abstracted away into separate code blocks.
+=IndexView= then shows the main interface with the found activity and also catalogues all activities. IHP uses JSX-like HSX syntax. HSX enables embedding Haskell bindings inside page layouts. Since HSX contents are not Haskell, they have been abstracted away into separate code blocks.
 #+caption: Web/View/Activities/Index.hs
 #+begin_src haskell :tangle liikuntakirja/Web/View/Activities/Index.hs
   module Web.View.Activities.Index where
@@ -558,7 +566,7 @@ The unified interface is laid out using simple HTML and Bootstrap CSS classes.
 #+begin_src html :noweb-ref Lay out the unified interface
   {navBar}
   {renderHeadline selectedActivity}
-  <div class="table-responsive">
+  <div class="table">
     <table class="table">
       <tr>
         <td>{renderSelectedActivity selectedActivity chartData}</td>
@@ -592,6 +600,16 @@ The unified interface is laid out using simple HTML and Bootstrap CSS classes.
 #+begin_src html :noweb-ref Lay out navigation bar
   {links}
 #+end_src
+
+The unified interface can then be seen when loading =/Activities=
+#+begin_src sh :results file graphics :file "./visualizations/activities_visualization.png" :dir .
+  <<Chromium binary>> <<Chromium options>> "http://localhost:8000/Activities"
+  <<Post-process screenshot>> visualizations/activities_visualization.png
+#+end_src
+
+#+RESULTS:
+[[file:./visualizations/activities_visualization.png]]
+
 ** User edits their personal health information
 User wants to input age for physical stress analysis. For now, it is left to the user to adjust this when looking at older activities. In a future version, user could put in their birthday and each activity will be adjusted for it in respect to activity time.
 
@@ -808,6 +826,74 @@ The settings interface should look like the mockup in the user story:
 
 ** User uploads smartwatch data into Liikuntakirja
 The user has TCX-formatted smartwatch data files on their computer, ready for uploading.
+*** Propositions
+
+Since parsing TCX files can be used in other programs too, we make it into a separate module with its own unit test suite.
+#+caption: Test/Application/TCXSpec.hs
+#+begin_src haskell :tangle liikuntakirja/Test/Application/TCXSpec.hs
+  module Test.Application.TCXSpec where
+  import Test.Hspec
+  import IHP.Prelude
+  import Data.Time (UTCTime)
+  import Data.Text.IO (readFile)
+  import Text.Read (read)
+
+  import Application.TCX
+  import Web.Types
+
+  tests :: Spec
+  tests = do
+    <<TCX unit test calls>>
+
+  <<TCX to record unit test>>
+#+end_src
+#+caption: Unit test modules
+#+begin_src haskell :noweb-ref Unit test module functions
+  Test.Application.TCXSpec.tests
+#+end_src
+
+We will have to parse the XML into a Haskell record form. As XML and Haskell records are structurally similar, while the database model has children pointing to parents instead of parents pointing to children, we're using an intermediate record type. The intermediate record also eases modularization and thus use of the parser in other contexts.
+
+Since the XML files and resulting records are big and not trivially referenced in string form in Haskell, we'll load them from respective files. We're happy with comparing both workout examples against a predefined =Show= instance results which too have been saved to separate files.
+#+caption: TCX to record unit test
+#+begin_src haskell :noweb-ref TCX to record unit test
+  tcxToRecord :: Spec
+  tcxToRecord = do
+    describe "processTcxFile" $ do
+      it "can parse and read TCX file into intermediate record" $ do
+        convertedWalkingTcx <- processTcxFile "Test/test.walking.tcx"
+        resultWalkingTcx <- readFile "Test/test.walking.tcx.result"
+        (show convertedWalkingTcx ++ "\n") `shouldBe`
+          resultWalkingTcx
+        convertedStrengthTcx <- processTcxFile "Test/test.strength.tcx"
+        resultStrengthTcx <- readFile "Test/test.strength.tcx.result"
+        (show convertedStrengthTcx ++ "\n") `shouldBe`
+          resultStrengthTcx
+#+end_src
+#+caption: TCX unit test calls
+#+begin_src haskell :noweb-ref TCX unit test calls
+  tcxToRecord
+#+end_src
+
+In the second step we will map and insert the intermediate record into the database by  "inverting" the XML/record rose tree. This happens in =ActivitiesController=.
+#+caption: Test inserting a record provided by Application.TCX into database
+#+begin_src haskell :noweb-ref Test inserting a record provided by Application.TCX into database
+  testTcxUpload = do
+    describe "ActivitiesController" $ do
+      it "adds a TCX upload successfully into database" $ withContext do
+        tcx <- fromJust . head <$> processTcxFile "Test/test.strength.tcx"
+        insertTcxActivity tcx
+        actCount <- query @Activity |> fetchCount
+        actCount `shouldBe` 1
+        lapCount <- query @Lap |> fetchCount
+        actCount `shouldBe` 1
+        tpCount <- query @Trackpoint |> fetchCount
+        tpCount `shouldBe` 5
+#+end_src
+#+begin_src haskell :noweb-ref ActivitiesSpec test function calls
+  testTcxUpload
+#+end_src
+*** Implementation
 
 To allow user uploads to =static/= directory, we'll have to import a configuration and some flags in =Config.hs= defined at Configure IHP
 #+caption: Import upload configuration
@@ -838,7 +924,7 @@ Once the user has browsed for a file and clicks "Upload", we will pass the uploa
 
 The TCX file we've received is an XML-formatted file. In the file, Trackpoints are of most interest as it keeps track of heart rate, speed and time, but Lap and Activity have some useful metadata too. We have to expect that occasionally any other field than =Time= can be missing, as even heart rate might not be included in first couple Trackpoint nodes. An example TCX produced by a 5-second strength training workout.
 #+caption: TCX file for a strength training workout
-#+begin_src xml :tangle liikuntakirja/test.tcx
+#+begin_src xml :tangle liikuntakirja/Test/test.strength.tcx
 <?xml version="1.0" encoding="UTF-8"?>
 <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
   <Activities>
@@ -920,10 +1006,9 @@ The TCX file we've received is an XML-formatted file. In the file, Trackpoints a
 </TrainingCenterDatabase>
 #+end_src
 
-An example of a 2-second walking workout. Note that sport is "Other" regardless if it is strength training (previous case) or walking (this case). Superfluous and identical with previous case, Author and Creator parts were cut out in this case to save your eyes. In the walking workout there is a peculiar edge case: as the watch auto-laps every 1000.0m, the last Lap will both lack some fields like heart rate statistics and have zero calories and cadence. As with previous case and this case, the XML's have been cut out from larger XML files and are not 100% authentic and shouldn't be taken as complete gospel.
+Another truncated example of a walking workout. Note that sport is "Other" regardless if it is strength training (previous case) or walking (this case). Superfluous and identical with previous case, Author and Creator parts were cut out in this case to save your eyes. In the walking workout there is a peculiar edge case: as the watch auto-laps every 1000.0m, the last Lap will both lack some fields like heart rate statistics and have zero calories and cadence. As with previous case and this case, the XML's have been cut out from larger XML files and are not 100% authentic and shouldn't be taken as complete gospel.
 #+caption: TCX file for a walking workout
-#+begin_src xml :tangle liikuntakirja/test.walking.tcx
-
+#+begin_src xml :tangle liikuntakirja/Test/test.walking.tcx
   <?xml version="1.0" encoding="UTF-8"?>
   <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
     <Activities>
@@ -1015,11 +1100,16 @@ An example of a 2-second walking workout. Note that sport is "Other" regardless 
               <Cadence>55</Cadence>
               <SensorState>Present</SensorState>
             </Trackpoint>
+          </Track>
+        </Lap>
         <Training VirtualPartner="false">
           <Plan Type="Workout" IntervalWorkout="false">
             <Extensions/>
           </Plan>
         </Training>
+        <Creator xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Device_t">
+          <Name>Polar INW3N_V2</Name>
+        </Creator>
       </Activity>
     </Activities>
   </TrainingCenterDatabase>
@@ -1137,102 +1227,93 @@ We collect these along with some descriptive aliases into types for the applicat
   <<Trackpoint schema>>
 #+end_src
 
-With these types, the first TCX file should then parse into a structure like this. *TODO: outdated*
-#+caption: Simple TCX XML converted to a record
+With these types, the strength training TCX file should then parse into a structure like this.
+#+caption: Truncated strength training TCX XML parsed into a record
 #+begin_src haskell
-  [TcxActivity
-   { tcxLaps =
-       [ TcxLap
-         { tcxLapStart = 2024-03-19 12:28:25.47 UTC
-         , tcxLapTotal = 5.0
-         , tcxLapDistance = 0.0
-         , tcxCals = 1
-         , tcxAvgHR = 61
-         , tcxMaxHR = 62
-         , tcxIntensity = "Active"
-         , tcxTrigger = "Manual"
-         , tcxTrack =
-             [ TcxTrackpoint
-               { tcxTpTime = 2024-03-19 12:28:25.47 UTC
-               , tcxTpDistance = 0.0
-               , tcxTpHR = 62
-               , tcxSensor = "Present"
-               }
-             , TcxTrackpoint
-               { tcxTpTime = 2024-03-19 12:28:26.47 UTC
-               , tcxTpDistance = 0.0
-               , tcxTpHR = 61
-               , tcxSensor = "Present"
-               }
-             , TcxTrackpoint
-               { tcxTpTime = 2024-03-19 12:28:27.47 UTC
-               , tcxTpDistance = 0.0
-               , tcxTpHR = 61
-               , tcxSensor = "Present"
-               }
-             , TcxTrackpoint
-               { tcxTpTime = 2024-03-19 12:28:28.47 UTC
-               , tcxTpDistance = 0.0
-               , tcxTpHR = 61
-               , tcxSensor = "Present"
-               }
-             , TcxTrackpoint
-               { tcxTpTime = 2024-03-19 12:28:29.47 UTC
-               , tcxTpDistance = 0.0
-               , tcxTpHR = 61
-               , tcxSensor = "Present"
-               }
-             ]
-         }
-       ]
-   , tcxSport = "Other"
-   , tcxActStart = 2024-03-19 12:28:24.47 UTC
-   , tcxPlanType = "Workout"
-   , tcxDeviceName = "Polar INW3N_V2"
-   }]
+  [ TcxActivity
+    { tcxLaps =
+      [ TcxLap
+        { tcxTrack =
+          [ TcxTrackpoint
+            { tcxTpTime = 2024-03-19 12:28:25.47 UTC
+            , tcxLatitude = Nothing
+            , tcxLongitude = Nothing
+            , tcxAltitude = Nothing
+            , tcxTpDistance = Nothing
+            , tcxTpHR = Nothing
+            , tcxCadence = Nothing
+            , tcxSensor = "Present"
+            }
+          , TcxTrackpoint
+            { tcxTpTime = 2024-03-19 12:28:26.47 UTC
+            , tcxLatitude = Nothing
+            , tcxLongitude = Nothing
+            , tcxAltitude = Nothing
+            , tcxTpDistance = Nothing
+            , tcxTpHR = Nothing
+            , tcxCadence = Nothing
+            , tcxSensor = "Present"
+            }
+          , TcxTrackpoint
+            { tcxTpTime = 2024-03-19 12:28:27.47 UTC
+            , tcxLatitude = Nothing
+            , tcxLongitude = Nothing
+            , tcxAltitude = Nothing
+            , tcxTpDistance = Nothing
+            , tcxTpHR = Just 61
+            , tcxCadence = Nothing
+            , tcxSensor = "Present"
+            }
+          , TcxTrackpoint
+            { tcxTpTime = 2024-03-19 12:28:28.47 UTC
+            , tcxLatitude = Nothing
+            , tcxLongitude = Nothing
+            , tcxAltitude = Nothing
+            , tcxTpDistance = Nothing
+            , tcxTpHR = Just 61
+            , tcxCadence = Nothing
+            , tcxSensor = "Present"
+            }
+          , TcxTrackpoint
+            { tcxTpTime = 2024-03-19 12:28:29.47 UTC
+            , tcxLatitude = Nothing
+            , tcxLongitude = Nothing
+            , tcxAltitude = Nothing
+            , tcxTpDistance = Nothing
+            , tcxTpHR = Just 61
+            , tcxCadence = Nothing
+            , tcxSensor = "Present"
+            }
+          ]
+        , tcxLapStart = 2024-03-19 12:28:25.47 UTC
+        , tcxLapTotal = 5.0
+        , tcxLapDistance = 0.0
+        , tcxMaxSpeed = Nothing
+        , tcxCals = 1
+        , tcxAvgHR = Just 61
+        , tcxMaxHR = Just 61
+        , tcxIntensity = "Active"
+        , tcxLapCadence = Nothing
+        , tcxTrigger = "Manual"
+        }
+      ]
+    , tcxSport = "Other"
+    , tcxActStart = 2024-03-19 12:28:24.47 UTC
+    , tcxPlanType = "Workout"
+    , tcxDeviceName = "Polar INW3N_V2"
+    }
+  ]
 #+end_src
 
-=TcxActivity='s =Show= instance should then produce this for the unit test comparison:
-#+begin_src haskell :tangle liikuntakirja/test.tcx.result
-  [TcxActivity {tcxLaps = [TcxLap {tcxLapStart = 2024-03-19 12:28:25.47 UTC, tcxLapTotal = 5.0, tcxLapDistance = 0.0, tcxCals = 1, tcxAvgHR = 61, tcxMaxHR = 62, tcxIntensity = "Active", tcxTrigger = "Manual", tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:25.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 62, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:26.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:27.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:28.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:29.47 UTC, tcxTpDistance = 0.0, tcxTpHR = 61, tcxSensor = "Present"}]}], tcxSport = "Other", tcxActStart = 2024-03-19 12:28:24.47 UTC, tcxPlanType = "Workout", tcxDeviceName = "Polar INW3N_V2"}]
+=TcxActivity='s =Show= instance would then produce this for comparison test:
+#+caption: Test/test.strength.tcx.result
+#+begin_src haskell :tangle liikuntakirja/Test/test.strength.tcx.result
+  [TcxActivity {tcxLaps = [TcxLap {tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:25.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Nothing, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:26.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Nothing, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:27.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Just 61, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:28.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Just 61, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:29.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Just 61, tcxCadence = Nothing, tcxSensor = "Present"}], tcxLapStart = 2024-03-19 12:28:25.47 UTC, tcxLapTotal = 5.0, tcxLapDistance = 0.0, tcxMaxSpeed = Nothing, tcxCals = 1, tcxAvgHR = Just 61, tcxMaxHR = Just 61, tcxIntensity = "Active", tcxLapCadence = Nothing, tcxTrigger = "Manual"}], tcxSport = "Other", tcxActStart = 2024-03-19 12:28:24.47 UTC, tcxPlanType = "Workout", tcxDeviceName = "Polar INW3N_V2"}]
 #+end_src
-We can now make a unit testing file for these conversions.
-#+caption: TCX unit tests
-#+begin_src haskell :tangle liikuntakirja/Test/Application/TCXSpec.hs
-  module Test.Application.TCXSpec where
-  import Test.Hspec
-  import IHP.Prelude
-  import Data.Time (UTCTime)
-  import Data.Text.IO (readFile)
-  import Text.Read (read)
-
-  import Application.TCX
-  import Web.Types
-
-  tests :: Spec
-  tests = do
-    <<TCX unit test calls>>
-#+end_src
-#+caption: Unit test modules
-#+begin_src haskell :noweb-ref Unit test module functions
-  Test.Application.TCXSpec.tests
-#+end_src
-
-Since the XML files and resulting records are big and not trivially referenced in string form in Haskell, we'll load them from a file.
-#+caption: TCX to record unit test
-#+begin_src haskell :tangle liikuntakirja/Test/Application/TCXSpec.hs
-  tcxToRecord :: Spec
-  tcxToRecord = do
-    describe "processTcxFile" $ do
-      it "can convert TCX file into TcxActivity" $ do
-        convertedTcx <- processTcxFile "test.tcx"
-        resultTcx <- readFile "test.tcx.result"
-        (show convertedTcx ++ "\n") `shouldBe`
-          resultTcx
-#+end_src
-#+caption: TCX unit test calls
-#+begin_src haskell :noweb-ref TCX unit test calls
-  tcxToRecord
+Similarly, the walking workout should then produce this.
+#+caption: Test/test.walking.tcx.result
+#+begin_src haskell :tangle liikuntakirja/Test/test.walking.tcx.result
+  [TcxActivity {tcxLaps = [TcxLap {tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-28 11:03:15.101 UTC, tcxLatitude = Just 61.44253, tcxLongitude = Just 23.852226, tcxAltitude = Just 158.193, tcxTpDistance = Just 0.0, tcxTpHR = Just 73, tcxCadence = Just 0, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-28 11:03:16.101 UTC, tcxLatitude = Just 61.44255, tcxLongitude = Just 23.85222, tcxAltitude = Just 158.193, tcxTpDistance = Just 0.0, tcxTpHR = Just 73, tcxCadence = Just 0, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-28 11:03:17.101 UTC, tcxLatitude = Just 61.442562, tcxLongitude = Just 23.852228, tcxAltitude = Just 158.193, tcxTpDistance = Just 0.0, tcxTpHR = Just 73, tcxCadence = Just 0, tcxSensor = "Present"}], tcxLapStart = 2024-03-28 11:03:15.101 UTC, tcxLapTotal = 2.0, tcxLapDistance = 3.7, tcxMaxSpeed = Just 1.831109, tcxCals = 3, tcxAvgHR = Just 73, tcxMaxHR = Just 73, tcxIntensity = "Active", tcxLapCadence = Just 51, tcxTrigger = "Distance"},TcxLap {tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-28 11:52:28.854 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Just 161.089, tcxTpDistance = Just 3003.8, tcxTpHR = Just 106, tcxCadence = Just 55, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-28 11:52:29.854 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Just 161.089, tcxTpDistance = Just 3005.1, tcxTpHR = Just 107, tcxCadence = Just 55, tcxSensor = "Present"}], tcxLapStart = 2024-03-28 11:52:28.854 UTC, tcxLapTotal = 2.585, tcxLapDistance = 3.4399903, tcxMaxSpeed = Nothing, tcxCals = 0, tcxAvgHR = Nothing, tcxMaxHR = Nothing, tcxIntensity = "Active", tcxLapCadence = Nothing, tcxTrigger = "Distance"}], tcxSport = "Other", tcxActStart = 2024-03-28 11:03:14.101 UTC, tcxPlanType = "Workout", tcxDeviceName = "Polar INW3N_V2"}]
 #+end_src
 
 First we'll convert the uploaded XML into the =TcxActivity= record type. TCX files can theoretically have multiple =Activities=, but they are not expected in this case. Neither is graceful exception handling required due to threaded nature of IHP and the singular purpose of the upload request, so using =fromJust= as a shortcut is fine for now.
@@ -1360,31 +1441,7 @@ Having put all this together, we can now convert a TCX file into a Haskell recor
   hspec $ Test.Application.TCXSpec.tcxToRecord
 #+end_src
 
-#+RESULTS:
-: processTcxFile
-:   can convert TCX file into TcxActivity [v]
-:
-: Finished in 0.0012 seconds
-: 1 example, 0 failures
-
 Then we can do a type conversion similar to the one we did in when reading the XML: converting from the intermediate =TcxActivity= into the =Activity=  and others, which are then saved in the database via =createRecord= and its merged INSERT variation =createMany=. IHP will then be using =Activity=, =Lap= and =Trackpoint= in the views.
-#+caption: Test converting TcxActivity into database records
-#+begin_src haskell :tangle liikuntakirja/Test/Controller/ActivitiesSpec.hs
-  testTcxUpload = do
-    describe "ActivitiesController" $ do
-      it "adds a TCX upload successfully into database" $ withContext do
-        tcx <- fromJust . head <$> processTcxFile "test.tcx"
-        insertTcxActivity tcx
-        actCount <- query @Activity |> fetchCount
-        actCount `shouldBe` 1
-        lapCount <- query @Lap |> fetchCount
-        actCount `shouldBe` 1
-        tpCount <- query @Trackpoint |> fetchCount
-        tpCount `shouldBe` 5
-#+end_src
-#+begin_src haskell :noweb-ref ActivitiesSpec test function calls
-  testTcxUpload
-#+end_src
 #+caption: Convert TcxActivity into Activity and other database records
 #+begin_src haskell :noweb-ref Convert TcxActivity into Activity and other database records
   insertTcxActivity :: (?modelContext::ModelContext) => TcxActivity -> IO Activity
@@ -1425,15 +1482,20 @@ Then we can do a type conversion similar to the one we did in when reading the X
     return activity
 #+end_src
 
+#+begin_src haskell :results value replace
+  :l Test/Main
+  hspec $ Test.Application.Spec.tcxToRecord
+#+end_src
+
 These two conversions then come together and with the results saved into database with =createRecord= and =createMany= earlier, we can congratulate the user and show them the uploaded =Activity=.
+
+#+begin_src haskell :results value replace
+  :l Test/Controller/ActivitiesSpec.hs
+  hspec $ aroundAll (withIHPApp WebApplication config) $ Test.Controller.ActivitiesSpec.testTcxUpload
+#+end_src
 ** User looks at an activity
 User opens the main view and either the newest activity or one they selected pops into their view. Details about their heart rate, heart rate zones, speed, and cadence along with total distance moved come into their view. Each new lap should be indicated in the graph. The graphs and info can be seen in [[interface mock-up][the united interface mock-up]].
 *** Propositions
-- label 5-sec averages as 00.00.05, 00.00.10, etc. Chart.js doesn't do any analysis on them, so it's up to the controller how to show them. Chart.js just picks up every 8th or whatever is set as the tick label.
-- average speeds and heart rates could be put in the chart as a single straight line, but maybe it gets too messy.
-- miten näitä nyt testaa: frontendiä paljolti, fetchausta ja se 5-sec avg.
-  - =queryActivityAndItsChildren= voi testata aika siististi. =ShowActivityAction= ihan tehtävissä. (Ei näitä toki pitäisi joutua näin päin miettimään TDD:ssä)
-  - oiskohan fetchaus luontaisempi tehdä etukäteen kuitenkin, vaikka käyttäjä periaatteessa on enempi frontendin kanssa tekemisissä. Toisaalta kun frontend määrää kuitenkin toiminnallisuuden, niin se voi olla luontaisempi. Frontend ei ole seurausta controllerista käyttäjäjohtoisessa kertomuksessa.
 
 In this part of the story, we'll have to consider how to visualize the data for the user, and how to get the data in a suitable form for proper visualization. We will use one chart for heart rate, its zones, speed and cadence, another smaller donut chart for visualizing the zones, and a small table for total distance, time, maybe calories and other tidbits in case the user suddenly comes up with new requirements
 
@@ -1474,7 +1536,7 @@ To fetch and sculpt the required data properly, these tests should pass.
     where
       createFauxActivity :: (?modelContext::ModelContext) => IO Activity
       createFauxActivity =
-        fromJust . head <$> processTcxFile "Test/test.tcx" >>= insertTcxActivity
+        fromJust . head <$> processTcxFile "Test/test.strength.tcx" >>= insertTcxActivity
 #+end_src
 #+begin_src haskell :noweb-ref ActivitiesSpec test function calls
   testChartData
@@ -1509,13 +1571,13 @@ There are 5 different data types to chart over time. Ideally these would fit in 
       datasets: [
           <<Plot heart rate>>
           ,
-          <<Plot heart rate zones>>
-          ,
           <<Plot speed>>
           ,
           <<Plot cadence>>
           ,
           <<Plot laps>>
+          ,
+          <<Plot heart rate zones>>
           ]
         },
     options: {
@@ -1542,7 +1604,7 @@ To plot and scale heart rates, following structures should do:
     borderColor: 'rgb(192, 75, 75)',
     pointStyle: false,
     tension: 0.1,
-    yAxisID: 'bpmY'
+    yAxisID: 'bpmY',
   }
 #+end_src
 To visualize the user's descent into old age, we'll always keep the maximum heart rate scale at the theoretical 20yo's maximum of 200 BPM. A common maximum is needed to visualize differences between exercises.
@@ -1554,6 +1616,9 @@ To visualize the user's descent into old age, we'll always keep the maximum hear
     title: {
       display: true,
       text: 'BPM, RPM, Km/h',
+    },
+    grid: {
+      color: 'rgb(255,255,255)'
     }
   }
 #+end_src
@@ -1564,51 +1629,56 @@ The heart rate zones require a bit of a different approach. Ideally we would pai
     type: 'line',
     label: '50% zone',
     data: [],
-    fill: false,
-    borderColor: 'rgb(192, 75, 75)',
+    fill: true,
+    backgroundColor: 'rgba(128, 192, 255, 0.5)',
     pointStyle: false,
-    tension: 0.1,
+    tension: 0,
     yAxisID: 'bpmY',
+    showLine: false
   },
   {
     type: 'line',
     label: '60% zone',
     data: [],
-    fill: false,
-    borderColor: 'rgb(192, 75, 75)',
+    fill: true,
+    backgroundColor: 'rgba(192, 192, 255, 0.5)',
     pointStyle: false,
-    tension: 0.1,
-    yAxisID: 'bpmY'
+    tension: 0,
+    yAxisID: 'bpmY',
+    showLine: false
   },
   {
     type: 'line',
     label: '70% zone',
     data: [],
-    fill: false,
-    borderColor: 'rgb(192, 75, 75)',
+    fill: true,
+    backgroundColor: 'rgba(192, 224, 224, 0.5)',
     pointStyle: false,
     tension: 0.1,
-    yAxisID: 'bpmY'
+    yAxisID: 'bpmY',
+    showLine: false
   },
   {
     type: 'line',
     label: '80% zone',
     data: [],
-    fill: false,
-    borderColor: 'rgb(192, 75, 75)',
+    fill: true,
+    backgroundColor: 'rgba(255, 255, 192, 0.5)',
     pointStyle: false,
-    tension: 0.1,
-    yAxisID: 'bpmY'
+    tension: 0,
+    yAxisID: 'bpmY',
+    showLine: false
   },
   {
     type: 'line',
     label: '90% zone',
     data: [],
-    fill: false,
-    borderColor: 'rgb(192, 75, 75)',
+    fill: true,
+    backgroundColor: 'rgba(255, 160, 160, 0.5)',
     pointStyle: false,
-    tension: 0.1,
-    yAxisID: 'bpmY'
+    tension: 0,
+    yAxisID: 'bpmY',
+    showLine: false
   }
 #+end_src
 To avoid littering the legends table, we will filter out the useless heart rate zone legends.
@@ -1623,6 +1693,13 @@ To avoid littering the legends table, we will filter out the useless heart rate 
                          && item.text !== '80% zone'
                          && item.text !== '90% zone')
       }
+    },
+    tooltip: {
+      filter: item => (item.datasetIndex !== 4
+                       && item.datasetIndex !== 5
+                       && item.datasetIndex !== 6
+                       && item.datasetIndex !== 7
+                       && item.datasetIndex !== 8)
     }
   }
 #+end_src
@@ -1634,7 +1711,7 @@ Speed is similar to heart rate, +but uses a different axis+ all use the same 0-2
     label: 'Speed',
     data: [],
     fill: false,
-    borderColor: 'rgb(75, 75, 128)',
+    borderColor: 'rgb(255, 255, 64)',
     pointStyle: false,
     tension: 0.1,
     yAxisID: 'bpmY'
@@ -1660,7 +1737,7 @@ Cadence goes in with speed.
     label: 'Cadence',
     data: [],
     fill: false,
-    borderColor: 'rgb(150, 150, 255)',
+    borderColor: 'rgb(64, 160, 64)',
     pointStyle: false,
     tension: 0.1,
     yAxisID: 'bpmY'
@@ -1674,7 +1751,7 @@ Finally, laps will be (for now) implemented with simple dots using a scatter typ
     label: 'Lap',
     data: [],
     fill: false,
-    borderColor: 'rgb(192, 192, 192)',
+    borderColor: 'rgb(128, 128, 128)',
     pointStyle: 'circle',
     radius: 10,
     tension: 0.1,
@@ -1690,13 +1767,16 @@ Everything above then is shown as a function of time. It's obvious from labels w
     title: {
       display: false,
       text: 'Time'
+    },
+    grid: {
+      color: 'rgb(255,255,255)'
     }
   }
 #+end_src
 
 This will then show up on a canvas.
 #+begin_src html :noweb-ref Show plotted activity
-  <div style="position: relative; height:60vh; width:60vw;"><canvas id="activityChart"></canvas></div>
+  <div style="position: relative;"><canvas id="activityChart"></canvas></div>
 #+end_src
 
 We can then put it all together
@@ -1720,14 +1800,14 @@ We'll then update the chart:
 #+begin_src js :noweb-ref Update chart
   var plotter = document.getElementById('activityPlotter');
   aPChart.data.datasets[0].data = JSON.parse(plotter.dataset.heartrate);
-  aPChart.data.datasets[1].data = JSON.parse(plotter.dataset.heartratezone1);
-  aPChart.data.datasets[2].data = JSON.parse(plotter.dataset.heartratezone2);
-  aPChart.data.datasets[3].data = JSON.parse(plotter.dataset.heartratezone3);
-  aPChart.data.datasets[4].data = JSON.parse(plotter.dataset.heartratezone4);
-  aPChart.data.datasets[5].data = JSON.parse(plotter.dataset.heartratezone5);
-  aPChart.data.datasets[6].data = JSON.parse(plotter.dataset.speed);
-  aPChart.data.datasets[7].data = JSON.parse(plotter.dataset.cadence);
-  aPChart.data.datasets[8].data = JSON.parse(plotter.dataset.laps);
+  aPChart.data.datasets[1].data = JSON.parse(plotter.dataset.speed);
+  aPChart.data.datasets[2].data = JSON.parse(plotter.dataset.cadence);
+  aPChart.data.datasets[3].data = JSON.parse(plotter.dataset.laps);
+  aPChart.data.datasets[4].data = JSON.parse(plotter.dataset.heartratezone1);
+  aPChart.data.datasets[5].data = JSON.parse(plotter.dataset.heartratezone2);
+  aPChart.data.datasets[6].data = JSON.parse(plotter.dataset.heartratezone3);
+  aPChart.data.datasets[7].data = JSON.parse(plotter.dataset.heartratezone4);
+  aPChart.data.datasets[8].data = JSON.parse(plotter.dataset.heartratezone5);
   aPChart.data.labels = JSON.parse(plotter.dataset.time);
   aPChart.scales.x.max = JSON.parse(plotter.dataset.totaltime);
   aPChart.update('none');
@@ -1786,14 +1866,14 @@ Average over 10 seconds, but last average might average over only 1-9 seconds.
        else average x : []
 #+end_src
 
-Then we'll work on heart rate zones. They have a simple spread based on deciles and a general rule on maximum heart rate being 220 minus your age BPM.
+Then we'll work on heart rate zones. They have a simple spread based on deciles and a general rule on maximum heart rate being 220 minus your age BPM. As the zones are drawn as overlapping blocks, we'll start the 90% zone at 100%, 80% at 90%, etc.
 #+begin_src haskell :noweb-ref Sculpt Activity into ChartData zones
       topHeartRate = fromIntegral $ 220 - age healthInfo
-      heartRateZones = (show . round $ topHeartRate * 0.5,
-                        show . round $ topHeartRate * 0.6,
-                        show . round $ topHeartRate * 0.7,
-                        show . round $ topHeartRate * 0.8,
-                        show . round $ topHeartRate * 0.9)
+      heartRateZones = (show . replicate (length heartRate) . round $ topHeartRate * 0.6,
+                        show . replicate (length heartRate) . round $ topHeartRate * 0.7,
+                        show . replicate (length heartRate) . round $ topHeartRate * 0.8,
+                        show . replicate (length heartRate) . round $ topHeartRate * 0.9,
+                        show . replicate (length heartRate) . round $ topHeartRate * 1.0)
 #+end_src
 
 Speed requires some differential calculations. Cadence not so much.
@@ -1906,7 +1986,7 @@ Finished in 0.9186 seconds
 
 
 ** User deletes an activity
-User has clicked delete button and confirmed deletion. Activity and its constituents will be remove from the database.
+User has clicked delete button and confirmed deletion. Activity and its constituents will be removed from the database.
 #+caption: Delete an activity
 #+begin_src haskell :noweb-ref Delete an activity
   action DeleteActivityAction { activityId } = do
