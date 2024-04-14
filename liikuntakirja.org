@@ -308,6 +308,22 @@ Any external programs or Haskell libraries should be added into the =flake.nix= 
   }
 #+end_src
 
+Every IHP program has a global =config=.
+#+caption: Config/Config.hs
+#+begin_src haskell :tangle liikuntakirja/Config/Config.hs
+  module Config where
+
+  import IHP.Prelude
+  import IHP.Environment
+  import IHP.FrameworkConfig
+  <<Import upload configuration>>
+
+  config :: ConfigBuilder
+  config = do
+    <<Set development or production flags>>
+    <<Allow uploads>>
+#+end_src
+
 Everything should now be set for both running the program and the untangled blocks of code in this notebook. The following block can be used to test if the environment is set up properly. In this case we'll show the whole output and not just the evaluated result, so any compilation errors can be easily seen.
 #+begin_src haskell :results output replace :dir ./liikuntakirja
   :t config
@@ -326,6 +342,12 @@ For deployment, following settings are then used:
 #+begin_src haskell
   option Production
   option (AppHostname "domain.tld")
+#+end_src
+
+The development mode has nice things like live reloading.
+#+caption: Development scripts
+#+begin_src html :noweb-ref Development scripts
+  <script id="livereload-script" src={assetPath "/livereload.js"} data-ws={liveReloadWebsocketUrl}></script>
 #+end_src
 
 The program is run either by running =devenv up= or the =start= script. The front page should open up in your default browser (via =xdg-open=) once the web server has started. [[http://localhost:8000/][The user interfacing part]] runs on port 8000 and [[http://localhost:8001/][the IHP  IDE]] on 8001. The program can be run in a separate session inside this notebook environment:
@@ -489,6 +511,19 @@ All these actions correspond to a function in =Controller ActivitiesController= 
 
   <<Sculpt Activity into ChartData>>
 #+end_src
+We'll use default routing options and have =Web.Controller.Activities= imported to =Web.FrontController=.
+#+caption: Controller routing instances
+#+begin_src haskell :noweb-ref Controller routing instances
+  instance AutoRoute ActivitiesController
+#+end_src
+#+caption: Parse controller routes
+#+begin_src haskell :noweb-ref Parse controller routes
+  , parseRoute @ActivitiesController
+#+end_src
+#+caption: Import controller actions
+#+begin_src haskell :noweb-ref Import controller actions
+  import Web.Controller.Activities
+#+end_src
 
 ** User accesses Liikuntakirja via browser
 We'll have to set the =Action= that's triggered on loading =/=. This goes into the main =Web/Routes.hs= file.
@@ -507,6 +542,112 @@ We'll have to set the =Action= that's triggered on loading =/=. This goes into t
     let newActivity = newRecord
         chartData = chartActivityData healthInfo (selectedActivity, laps, tps)
     render IndexView { .. }
+#+end_src
+
+=IndexView= is going to render the web page for user's browser. It is dependent on a couple of defaults, namely the layout elements universal to any page we will be rendering, =defaultLayout=.
+
+#+caption: Web/View/Layout.hs
+#+begin_src haskell :tangle liikuntakirja/Web/View/Layout.hs
+
+  module Web.View.Layout (defaultLayout, Html) where
+
+  import IHP.ViewPrelude
+  import IHP.Environment
+  import Generated.Types
+  import IHP.Controller.RequestContext
+  import Web.Types
+  import Web.Routes
+  import Application.Helper.View
+
+  defaultLayout :: Html -> Html
+  defaultLayout inner = [hsx|
+  <<Default page layout>>
+  |]
+
+  -- The 'assetPath' function used below appends a `?v=SOME_VERSION` to the static assets in production
+  -- This is useful to avoid users having old CSS and JS files in their browser cache once a new version is deployed
+  -- See https://ihp.digitallyinduced.com/Guide/assets.html for more details
+
+  stylesheets :: Html
+  stylesheets = [hsx|
+          <<CSS stylesheets>>
+      |]
+
+  scripts :: Html
+  scripts = [hsx|
+          <<JavaScript libraries>>
+      |]
+
+  devScripts :: Html
+  devScripts = [hsx|
+          <<Development scripts>>
+      |]
+
+  metaTags :: Html
+  metaTags = [hsx|
+      <<Meta tags>>
+  |]
+#+end_src
+
+=defaultLayout= uses a set of JavaScript libraries
+#+caption: JavaScript libraries
+#+begin_src html :noweb-ref JavaScript libraries
+  {when isDevelopment devScripts}
+  <script src={assetPath "/vendor/jquery-3.6.0.slim.min.js"}></script>
+  <script src={assetPath "/vendor/timeago.js"}></script>
+  <script src={assetPath "/vendor/popper-2.11.6.min.js"}></script>
+  <script src={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.js"}></script>
+  <script src={assetPath "/vendor/flatpickr.js"}></script>
+  <script src={assetPath "/vendor/morphdom-umd.min.js"}></script>
+  <script src={assetPath "/vendor/turbolinks.js"}></script>
+  <script src={assetPath "/vendor/turbolinksInstantClick.js"}></script>
+  <script src={assetPath "/vendor/turbolinksMorphdom.js"}></script>
+  <script src={assetPath "/helpers.js"}></script>
+  <script src={assetPath "/ihp-auto-refresh.js"}></script>
+  <script src={assetPath "/app.js"}></script>
+  <<Import JavaScript libraries>>
+#+end_src
+
+and a set of CSS stylesheets. Liikuntakirja uses the straightforward if bland Bootstrap stylesheet.
+#+caption: CSS stylesheets
+#+begin_src html :noweb-ref CSS stylesheets
+  <link rel="stylesheet" href={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.css"}/>
+  <link rel="stylesheet" href={assetPath "/vendor/flatpickr.min.css"}/>
+  <link rel="stylesheet" href={assetPath "/app.css"}/>
+#+end_src
+
+Some =<meta>= tags too, you know, for '90s SEO or something.
+#+caption: Meta tags
+#+begin_src html :noweb-ref Meta tags
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+  <meta property="og:title" content="App"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="TODO"/>
+  <meta property="og:description" content="TODO"/>
+  {autoRefreshMeta}
+#+end_src
+
+Finally the default HTML with views like =IndexView= embedded into =inner= element.
+#+caption: Default page layout
+#+begin_src html :noweb-ref Default page layout
+  <!DOCTYPE html>
+  <html lang="en">
+      <head>
+          {metaTags}
+
+          {stylesheets}
+          {scripts}
+
+          <title>{pageTitleOrDefault "App"}</title>
+      </head>
+      <body>
+          <div class="container mt-4">
+              {renderFlashMessages}
+              {inner}
+          </div>
+      </body>
+  </html>
 #+end_src
 
 =IndexView= then shows the main interface with the found activity and also catalogues all activities. IHP uses JSX-like HSX syntax. HSX enables embedding Haskell bindings inside page layouts. Since HSX contents are not Haskell, they have been abstracted away into separate code blocks.
@@ -2005,21 +2146,6 @@ User has clicked delete button and confirmed deletion. Activity and its constitu
 
 * Boilerplate epilogue
 #+PROPERTY:header-args :dir ./liikuntakirja :mkdirp yes :exports code :noweb no-export :eval never-export
-Every IHP program has a global configuration.
-#+caption: Config/Config.hs
-#+begin_src haskell :tangle liikuntakirja/Config/Config.hs
-  module Config where
-
-  import IHP.Prelude
-  import IHP.Environment
-  import IHP.FrameworkConfig
-  <<Import upload configuration>>
-
-  config :: ConfigBuilder
-  config = do
-    <<Set development or production flags>>
-    <<Allow uploads>>
-#+end_src
 
 #+caption: Web/Types.hs
 #+begin_src haskell :tangle liikuntakirja/Web/Types.hs
@@ -2094,126 +2220,4 @@ An SQL schema file is used to set up the database. Any further manipulation shou
 #+caption: Application/Fixtures.sql
 #+begin_src sql :tangle liikuntakirja/Application/Fixtures.sql
   <<Insert default HealthInformation row>>
-#+end_src
-
-** Activities
-#+caption: Route Activities
-#+begin_src haskell :noweb-ref Controller routing instances
-  instance AutoRoute ActivitiesController
-#+end_src
-
-#+caption: Import Activities
-#+begin_src haskell :noweb-ref Import controller actions
-  import Web.Controller.Activities
-#+end_src
-
-#+caption: Parse Activities route
-#+begin_src haskell :noweb-ref Parse controller routes
-  , parseRoute @ActivitiesController
-#+end_src
-
-** Javascript libraries, CSS stylesheets, meta tags and default layout
-#+caption: JavaScript libraries
-#+begin_src html :noweb-ref JavaScript libraries
-  {when isDevelopment devScripts}
-  <script src={assetPath "/vendor/jquery-3.6.0.slim.min.js"}></script>
-  <script src={assetPath "/vendor/timeago.js"}></script>
-  <script src={assetPath "/vendor/popper-2.11.6.min.js"}></script>
-  <script src={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.js"}></script>
-  <script src={assetPath "/vendor/flatpickr.js"}></script>
-  <script src={assetPath "/vendor/morphdom-umd.min.js"}></script>
-  <script src={assetPath "/vendor/turbolinks.js"}></script>
-  <script src={assetPath "/vendor/turbolinksInstantClick.js"}></script>
-  <script src={assetPath "/vendor/turbolinksMorphdom.js"}></script>
-  <script src={assetPath "/helpers.js"}></script>
-  <script src={assetPath "/ihp-auto-refresh.js"}></script>
-  <script src={assetPath "/app.js"}></script>
-  <<Import JavaScript libraries>>
-#+end_src
-
-#+caption: CSS stylesheets
-#+begin_src html :noweb-ref CSS stylesheets
-  <link rel="stylesheet" href={assetPath "/vendor/bootstrap-5.2.1/bootstrap.min.css"}/>
-  <link rel="stylesheet" href={assetPath "/vendor/flatpickr.min.css"}/>
-  <link rel="stylesheet" href={assetPath "/app.css"}/>
-#+end_src
-
-#+caption: Meta tags
-#+begin_src html :noweb-ref Meta tags
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-  <meta property="og:title" content="App"/>
-  <meta property="og:type" content="website"/>
-  <meta property="og:url" content="TODO"/>
-  <meta property="og:description" content="TODO"/>
-  {autoRefreshMeta}
-#+end_src
-
-#+caption: Development scripts
-#+begin_src html :noweb-ref Development scripts
-  <script id="livereload-script" src={assetPath "/livereload.js"} data-ws={liveReloadWebsocketUrl}></script>
-#+end_src
-
-#+caption: Default page layout
-#+begin_src html :noweb-ref Default page layout
-  <!DOCTYPE html>
-  <html lang="en">
-      <head>
-          {metaTags}
-
-          {stylesheets}
-          {scripts}
-
-          <title>{pageTitleOrDefault "App"}</title>
-      </head>
-      <body>
-          <div class="container mt-4">
-              {renderFlashMessages}
-              {inner}
-          </div>
-      </body>
-  </html>
-#+end_src
-
-#+caption: The defaultLayout definition
-#+begin_src haskell :tangle liikuntakirja/Web/View/Layout.hs
-
-  module Web.View.Layout (defaultLayout, Html) where
-
-  import IHP.ViewPrelude
-  import IHP.Environment
-  import Generated.Types
-  import IHP.Controller.RequestContext
-  import Web.Types
-  import Web.Routes
-  import Application.Helper.View
-
-  defaultLayout :: Html -> Html
-  defaultLayout inner = [hsx|
-  <<Default page layout>>
-  |]
-
-  -- The 'assetPath' function used below appends a `?v=SOME_VERSION` to the static assets in production
-  -- This is useful to avoid users having old CSS and JS files in their browser cache once a new version is deployed
-  -- See https://ihp.digitallyinduced.com/Guide/assets.html for more details
-
-  stylesheets :: Html
-  stylesheets = [hsx|
-          <<CSS stylesheets>>
-      |]
-
-  scripts :: Html
-  scripts = [hsx|
-          <<JavaScript libraries>>
-      |]
-
-  devScripts :: Html
-  devScripts = [hsx|
-          <<Development scripts>>
-      |]
-
-  metaTags :: Html
-  metaTags = [hsx|
-      <<Meta tags>>
-  |]
 #+end_src
