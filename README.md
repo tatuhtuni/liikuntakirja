@@ -1,0 +1,1 @@
+Liikuntakirja is an experimental notebook project used in my thesis. You can open the original liikuntakirja.org or the one with Labovian themes marked in Emacs, and the notebook will guide you on how to set the environment and project up.

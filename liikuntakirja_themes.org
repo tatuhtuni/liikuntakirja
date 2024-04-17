@@ -3,11 +3,11 @@
 * Developer's prologue
 #+PROPERTY:header-args :dir . :mkdirp yes :exports code :noweb no-export :results silent :eval never-export
 The prologue covers setting up this notebook and the Liikuntakirja exercise tracker program contained within. This notebook and its program has some special requirements that need to be accounted for.
-
+- *tiivistelmä > orientaatio*
 ** Setup notebook environment
-The following can be executed for a temporary session environment for this notebook. Note that while =setq= is used for temporary effect (instead of =customize-variable=), =use-package= will install the packages for good. Code blocks like the one below are run with =C-c C-c=. For better readability, font and other stylistic configuration in style of [[https://zzamboni.org/post/beautifying-org-mode-in-emacs/][Zzamboni's Beautifying Org Mode in Emacs]] is recommended. This document has some, but is limited to basics for clarity. =Tab= collapses long code blocks.
-
-#+caption: Example Emacs configuration
+- *orientaatio*
+The following can be executed for a temporary session environment for this notebook. Note that while =setq= is used for temporary effect (instead of =customize-variable=), =use-package= will install the packages for good. Code blocks like the one below are run with =C-c C-c=. For better readability, font and other stylistic configuration in style of [[https://zzamboni.org/post/beautifying-org-mode-in-emacs/][Zzamboni's Beautifying Org Mode in Emacs]] is recommended. This section has some, but is limited to basics for clarity. =Tab= collapses long code blocks.
+#+caption: Emacs configuration example
 #+begin_src elisp :results silent
   ;; Don't confirm killing processes on exit
   (setq confirm-kill-processes nil)
@@ -28,8 +28,8 @@ The following can be executed for a temporary session environment for this noteb
 
   ;; Initialize package system. Add MELPA.
   (setq package-archives
-        '(("melpa"     . "https://melpa.org/packages/")
-          ("elpa"      . "https://elpa.gnu.org/packages/")))
+	'(("melpa"     . "https://melpa.org/packages/")
+	  ("elpa"      . "https://elpa.gnu.org/packages/")))
   (package-initialize)
   (when (not package-archive-contents)
     (package-refresh-contents))
@@ -62,10 +62,10 @@ The following can be executed for a temporary session environment for this noteb
   ;; (note: Noweb nodes without :tangle set cannot be opened this way)
   (defun ibizaman/org-babel-goto-tangle-file ()
     (if-let* ((args (nth 2 (org-babel-get-src-block-info t)))
-              (tangle (alist-get :tangle args)))
-        (when (not (equal "no" tangle))
-          (find-file tangle)
-          t)))
+	      (tangle (alist-get :tangle args)))
+	(when (not (equal "no" tangle))
+	  (find-file tangle)
+	  t)))
   (add-hook 'org-open-at-point-functions 'ibizaman/org-babel-goto-tangle-file)
 
   ;; eglot haskell IDE can be used within tangled files
@@ -75,15 +75,15 @@ The following can be executed for a temporary session environment for this noteb
     (add-hook 'haskell-mode-hook #'eglot-ensure)
     ;; Optionally add keybindings to some common functions:
     :bind ((:map eglot-mode-map
-                 ("C-c C-e r" . eglot-rename)
-                 ("C-c C-e l" . flymake-show-buffer-diagnostics)
-                 ("C-c C-e p" . flymake-show-project-diagnostics)
-                 ("C-c C-e C" . eglot-show-workspace-configuration)
-                 ("C-c C-e R" . eglot-reconnect)
-                 ("C-c C-e S" . eglot-shutdown)
-                 ("C-c C-e A" . eglot-shutdown-all)
-                 ("C-c C-e a" . eglot-code-actions)
-                 ("C-c C-e f" . eglot-format))))
+		 ("C-c C-e r" . eglot-rename)
+		 ("C-c C-e l" . flymake-show-buffer-diagnostics)
+		 ("C-c C-e p" . flymake-show-project-diagnostics)
+		 ("C-c C-e C" . eglot-show-workspace-configuration)
+		 ("C-c C-e R" . eglot-reconnect)
+		 ("C-c C-e S" . eglot-shutdown)
+		 ("C-c C-e A" . eglot-shutdown-all)
+		 ("C-c C-e a" . eglot-code-actions)
+		 ("C-c C-e f" . eglot-format))))
 
   ;; Allow in-place language execution for Latex, Python, Haskell, and shell languages.
   (org-babel-do-load-languages
@@ -107,8 +107,8 @@ The following can be executed for a temporary session environment for this noteb
 
   ;; Font-lock substitution for list markers
   (font-lock-add-keywords 'org-mode
-                          '(("^ *\\([-]\\) "
-                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+			  '(("^ *\\([-]\\) "
+			     (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
   ;; org-bullets
   (use-package org-bullets
@@ -134,21 +134,24 @@ The following can be executed for a temporary session environment for this noteb
   (org-sidebar-tree-toggle)
   (org-display-inline-images)
 #+end_src
+- *orientaatio + mutkaistava toiminta*
 
 =variable-pitch-mode= is highly recommended. Default theme does not differentiate between code blocks and prose, which makes using it moot. To enable differentiation, using a non-default theme like =poet= is required.
 #+begin_src elisp :results silent
   (variable-pitch-mode 1)
 #+end_src
 #+begin_src elisp :results silent
-(use-package poet-theme
-  :ensure t)
-(load-theme 'poet t)
+  (use-package poet-theme
+    :ensure t)
+  (load-theme 'poet t)
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 Every block that /does/ have =results= header can be executed. If you don't want to be yes/no prompted every time you execute a block, you can disable the prompt by
 #+begin_src elisp :results silent
   (setq org-confirm-babel-evaluate nil)
 #+end_src
+- *mutkaistava toiminta*
 
 Saving & tangling this file might induce a ~second long garbage collection operation as it makes ~50MB worth of data structures. Garbage collection threshold should be raised to e.g. 512 megabytes from the default ~800 kilobytes. Exact number depends on how much RAM is disposable while the Emacs process is running.
 #+begin_src elisp :results silent
@@ -158,6 +161,7 @@ Saving & tangling this file might induce a ~second long garbage collection opera
                 after-focus-change-function
                 (lambda () (unless (frame-focus-state) (garbage-collect))))
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 To run frontend visualizations, a Chromium binary is required.
 #+caption: Chromium binary
@@ -174,6 +178,7 @@ The user's viewport is assumed as
 #+begin_src sh :noweb-ref Testing viewport size
   1920x1200
 #+end_src
+- *mutkaistava toiminta*
 
 ImageMagick's =convert= is used to scale down the visualizations for viewability
 #+caption: Post-process screenshot
@@ -184,60 +189,75 @@ Availability can be checked with =which=.
 #+begin_src sh :results output replace
   which convert
 #+end_src
+- *mutkaistava toiminta*
 
 Visualizations using an image file will be downscaled to following format
 #+caption: Visualization size
 #+begin_src sh :noweb-ref Visualization size
   640x400
 #+end_src
+- *lopputulos*
 
 If using Org 9.6 or earlier (=M-x org-version=), executing blocks that produce graphics will error when using indirect buffers (usually via =org-sidebar)=. This is fixed in yet-to-be-released Org 9.7 ([[https://git.savannah.gnu.org/cgit/emacs/org-mode.git/commit/lisp/ob-core.el?id=c730caf51][commit c730caf51]]). As a one-liner fix, it can also be hackily patched by hand in =ob-core.el= (not =.elc=) usually found in =/usr/share/emacs/[version number]/lisp/org/=.
-
+- *arviointi*
 ** Weaving this notebook
+- *tiivistelmä*
 A =liikuntakirja.html= can be produced in the working directory and opened in your default browser with =C-c C-e h o=. For syntax highlighting, =htmlize= can be installed, which automatically hooks on to the HTML export function.
 #+begin_src elisp :results silent
   (use-package htmlize
     :ensure t)
 #+end_src
+- *orientaatio, lopputulos*
 
 However, this notebook might be better read via Emacs' interface, with things like =variable-pitch-mode=, =org-sidebar=, and a suitable theme set.
-
+- *arviointi*
 ** Install IHP prerequisites
+- *tiivistelmä*
+
 [[https://ihp.digitallyinduced.com/][Integrated Haskell Platform]] is a fairly opinionated batteries-included web framework. It follows an MVC design and includes live reloading plus reproducible development and deployment environments (a sandbox). PostgreSQL is used out of the box for the model and is installed inside the application's sandbox. The sandbox is done using Nix. Nix depends on Git, Curl, Make, and Direnv.
+- *tiivistelmä, orientaatio*
 
 These steps have been derived from the [[https://ihp.digitallyinduced.com/Guide/installation.html][IHP guide]].
 #+caption: An example shell command for Dnf package manager with Fedora repositories.
 #+begin_src shell
   sudo dnf install git curl make direnv
 #+end_src
+- *mutkaistava toiminta*
 
 Then we can install Nix. /Note: The Nix installer appends your terminal emulator configuration to enable Direnv support./
 #+begin_src shell :results silent :dir .
   curl -L https://nixos.org/nix/install | sh
 #+end_src
+- *mutkaistava toiminta*
 
 After running the install script, shell environment has to be reloaded. To brute force this, restart Emacs and the shell session it's running in. Sourcing your appended terminal emulator configuration can be enough if you know what you are doing.
-
+- *mutkaistava toiminta*
 ** Setup IHP and the initial project
+- *orientaatio*
+
 IHP uses a web application creation script they call =ihp-new= found in the Nix repositories.
 #+begin_src shell :results silent :dir .
   nix-env --install ihp-new
 #+end_src
+- *mutkaistava toiminta*
 
 However, IHP uses Nix "flake" architecture, which requires special handling when used inside git repositories like the one this notebook is in ([[https://github.com/NixOS/nix/issues/6642][nix issue #6642]], [[https://github.com/digitallyinduced/ihp/issues/1787][ihp issue #1787]]). To work around this issue, a separate git repository has to be created for the program itself. As of writing this, Nix repositories still had an outdated =ihp-new= lacking automatic git init, so a newer =ihp-new= (commit 016a14d) from IHP repository is bundled with this notebook. The newer one will initialize git repository using default credentials and options.
+- *mutkaistava toiminta, arviointi*
 
 Setting an IHP project up for the first time can take a long time, is verbose, and asks if precompiled binaries can be used. Thus, it may be preferable to run it in a separate terminal without piping =yes=. If using precompiled binaries is fine and you don't want to see progress bars, it can be run inside the notebook:
 #+begin_src shell :results silent :dir .
   yes | ./ihp-new liikuntakirja
 #+end_src
+- *mutkaistava toiminta, arviointi*
 
 With the project set up, this document should now be tangled with  =C-c C-v t= (=org-babel-tangle=).
+- *mutkaistava toiminta*
 
 The following assets are needed inside the program.
 #+begin_src shell :results silent :dir .
   wget https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js -P ./liikuntakirja/static/ # frontend plotting library
-
 #+end_src
+- *mutkaistava toiminta*
 
 If you intend to edit the code, setting the editor to save on unfocus and to tangle on save smoothens the experience. Combined with IHP's reactive coding (autoreloading), it tightens up the interactive loop.
 #+begin_src elisp :results silent
@@ -251,13 +271,15 @@ If you intend to edit the code, setting the editor to save on unfocus and to tan
     (save-some-buffers t))
   (add-hook 'focus-out-hook 'save-all)
 #+end_src
-
+- *mutkaistava toiminta, arviointi*
 ** Project configuration
+- *orientaatio*
 Org Mode's Babel interfaces lean on regex pattern matching. To get =ob-haskell= to execute Haskell blocks properly, we have to amend the default =.ghci= file with the default =ghci= prompt (=ghci>=), instead of the one set by IHP (=IHP>=).
 #+caption: Set default GHCi prompt
 #+begin_src haskell :noweb-ref Set default GHCi prompt
   :set prompt "ghci> "
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 #+caption: .ghci
 #+begin_src haskell :tangle liikuntakirja/.ghci
@@ -267,6 +289,7 @@ Org Mode's Babel interfaces lean on regex pattern matching. To get =ob-haskell= 
   import IHP.Prelude
   <<Set default GHCi prompt>>
 #+end_src
+- *mutkaistava toiminta*
 
 Any external programs or Haskell libraries should be added into the =flake.nix= which reproducibly builds the software environment for the program for any new deployment.
 #+caption: flake.nix
@@ -319,6 +342,8 @@ Any external programs or Haskell libraries should be added into the =flake.nix= 
           };
   }
 #+end_src
+- *arviointi, mutkaistava toiminta*
+
 
 Every IHP program has a global =config=.
 #+caption: Config/Config.hs
@@ -335,50 +360,61 @@ Every IHP program has a global =config=.
     <<Set development or production flags>>
     <<Allow uploads>>
 #+end_src
+- *mutkaistava toiminta*
+
 
 ** Running the program
+- *orientaatio*
+
 We will have to set the =Development= / =Production= flags and a proper host name in the global =config=. These are fine for development:
 #+caption: Set development or production flags
 #+begin_src haskell :noweb-ref Set development or production flags
   option Development
   option (AppHostname "localhost")
 #+end_src
+- *arviointi, mutkaistava toiminta*
 For deployment, following settings are then used:
 #+begin_src haskell
   option Production
   option (AppHostname "domain.tld")
 #+end_src
+- *arviointi, mutkaistava toiminta*
 
 The development mode has nice things like live reloading.
 #+caption: Development scripts
 #+begin_src html :noweb-ref Development scripts
   <script id="livereload-script" src={assetPath "/livereload.js"} data-ws={liveReloadWebsocketUrl}></script>
 #+end_src
+- *arviointi, mutkaistava toiminta*
 
 The program is run either by running =devenv up= or the =start= script. The front page should open up in your default browser (via =xdg-open=) once the web server has started. [[http://localhost:8000/][The user interfacing part]] runs on port 8000 and [[http://localhost:8001/][the IHP  IDE]] on 8001. The program can be run in a separate session inside this notebook environment (*async is broken on some setups*):
-#+begin_src sh :results silent :session *ihp* :async yes :dir ./liikuntakirja
+#+begin_src sh :results silent :async yes :session *ihp* :dir ./liikuntakirja
   ./start
 #+end_src
+- *lopputulos & arviointia*
 
-Everything should now be set for both running the program and the untangled blocks of code in this notebook. The following block can be used to test if the environment is set up properly. In this case we'll show the whole output and not just the evaluated result, so any compilation errors can be easily seen.
+With =start= script initializing database and the type system, everything should now be set for both running blocks of code in this notebook. The following block can be used to test if the environment is set up properly. In this case we'll show the whole output and not just the evaluated result, so any compilation errors can be easily seen.
 #+begin_src haskell :results output replace :dir ./liikuntakirja
   :t config
 #+end_src
-
+- *arviointi*
+  
 Any code block results can be cleared per-block with =C-c C-v k= (=org-babel-remove-result=) and globally using Emacs' universal prefix =C-u= (=C-u C-c C-v k=, =org-babel-remove-result-one-or-many=).
+- *arviointi*
 
-Any tests in this notebook will require a running Liikuntakirja instance, as they use its database interface. If there are type-related compilation issues or database issues (= the schema has been changed after first running =start=), types & database schema should be reformatted. Either format (migrate) it graphically in [[http://localhost:8001/][the IHP IDE]] or run:
+Any tests in this notebook will require a running Liikuntakirja instance, as they use its database interface. If there are database issues (if the schema has been changed after first running =start=), database structure can be reformatted. Either format (migrate) it graphically in [[http://localhost:8001/][the IHP IDE]] or run:
 #+begin_src sh :results silent :session *psql* :dir ./liikuntakirja
   make db
 #+end_src
-
+- *lopetus*
 ** Unit testing
+- *tiivistelmä*
 The project uses HSpec testing framework for unit tests.
 #+caption: Haskell dependencies
 #+begin_src nix :noweb-ref Haskell dependencies
   hspec
 #+end_src
-
+- *orientaatio*
 Hspec is a straightforward unit testing suite. We'll set up a root testing file in =Test/Main.hs=.
 #+caption: Test/Main.hs
 #+begin_src haskell :tangle liikuntakirja/Test/Main.hs
@@ -394,7 +430,7 @@ Hspec is a straightforward unit testing suite. We'll set up a root testing file 
   main = hspec do
       <<Unit test module functions>>
 #+end_src
-
+- *orientaatio, mutkaistava tekijä*
 #+caption: Import universal IHP unit testing libraries
 #+begin_src haskell :noweb-ref Import universal IHP unit testing libraries
   import Network.HTTP.Types.Status
@@ -411,6 +447,7 @@ Hspec is a straightforward unit testing suite. We'll set up a root testing file 
   import Config
   import Generated.Types
 #+end_src
+
 
 Liikuntakirja is mostly actuated via the =Activities= controller.
 #+caption: Unit test modules
@@ -449,27 +486,34 @@ Liikuntakirja is mostly actuated via the =Activities= controller.
 
   <<Test inserting a record provided by Application.TCX into database>>
 #+end_src
+- *lopputulos*
 
 With the framework set up and the program running in the background (most unit tests require a running PostgreSQL instance), we can now run all the tests by loading Main and running =main=.
 #+begin_src haskell :results value replace
   :l Test/Main
   main
 #+end_src
+- *arviointi, lopetus*
 * The Liikuntakirja story
 #+PROPERTY:header-args :dir ./liikuntakirja :mkdirp yes :exports code :noweb no-export :eval never-export
 Liikuntakirja is a story of a person wanting to upload, view, and delete their workout sessions originally recorded on a smartwatch. The universal fitness trackers found on market are too complex to use and make compromises to cover all bases. These don't cater to tracking the user's workout sessions in a minimalistic way. The user wants a tracker they can run on their own computer. The user uses =cmaion='s =polar= suite ([[https://github.com/cmaion/polar][GitHub repository]]) to interface and produce TCX files.
+- *tiivistelmä + orientaatio*
 
 The user is happy with a unified single-page interface. An exercise session can be selected from a menu and a new one can be uploaded from their computer. At the same time the data from either the newest upload or the one specially selected from the drop-down is shown.
+- *orientaatio*
 
 User wants personalized reports about how the metered heart rates matched the physical stress derived from their age. Per-activity, user wants to see their heart rate and possible moving speed, with total distance, and maximum and average heart rate over the activity.
-
+- *orientaatio*
 #+caption: Client's UI mock-up
 #+name: interface mock-up
 [[./assets/mockup.png]]
+- *orientaatio*
 
 This document will lead us from the perspective of a user using the software artefact. The user will first see the front page with all added activities indexed. They will then move on to add an activity. Then they will examine the added activity. After that the activity will be deleted as unsatisfactory.
+- *tiivistelmä*
 
 A set of tests will be derived from the story and the code derived from those will be shown as needed, which means any boilerplate without a clear story component can be found in the epilogue. The boilerplate should only have to be edited when refactoring the code.
+- *orientaatio*
 
 Since the user is only interested in activities, we can do essentially everything via =ActivitiesController=. =Activity= is a data structure signifying a single workout. It is examined closer when the user starts uploading their activities. =ActivitiesController= produces a =View= depending on the =Action=. Multiple =Actions= can lead to the same =View=, and in this program's case, since it is a unified single page interface, all =Actions= eventually lead to =IndexView=. The =IndexView= always indexes all the activities. We offer the user abilities to show the newest activity (=ActivitiesAction=) or a specific activity (=ShowActivityAction=) with the index. User can also upload (=CreateActivityAction=) and delete (=DeleteActivityAction=) activities.
 #+caption: Type ActivitiesController
@@ -481,6 +525,7 @@ Since the user is only interested in activities, we can do essentially everythin
       | DeleteActivityAction { activityId :: !(Id Activity) }
       deriving (Eq, Show, Data)
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 All these actions correspond to a function in =Controller ActivitiesController= type class instance, which acts the main hub of =Activity=-specific handling.
 #+caption: Web/Controller/Activities.hs
@@ -515,6 +560,7 @@ All these actions correspond to a function in =Controller ActivitiesController= 
 
   <<Sculpt Activity into ChartData>>
 #+end_src
+- *mutkaistava toiminta*
 We'll use default routing options and have =Web.Controller.Activities= imported to =Web.FrontController=.
 #+caption: Controller routing instances
 #+begin_src haskell :noweb-ref Controller routing instances
@@ -528,13 +574,40 @@ We'll use default routing options and have =Web.Controller.Activities= imported 
 #+begin_src haskell :noweb-ref Import controller actions
   import Web.Controller.Activities
 #+end_src
+- *lopputulos*
 
 ** User accesses Liikuntakirja via browser
-We'll have to set the =Action= that's triggered on loading =/=. This goes into the main =Web/Routes.hs= file.
+- *tiivistelmä*
+We'll have to set the =Action= that's triggered on loading =/=. This goes into the controller collection  =Web/FrontController.hs=.
 #+caption: Set ActivitiesAction as front page
 #+begin_src haskell :noweb-ref Set ActivitiesAction as front page
   startPage ActivitiesAction
 #+end_src
+
+#+caption: Web/FrontController.hs
+#+begin_src haskell :tangle liikuntakirja/Web/FrontController.hs
+  module Web.FrontController where
+
+  import IHP.RouterPrelude
+  import Web.Controller.Prelude
+  import Web.View.Layout (defaultLayout)
+
+  -- Controller Imports
+  <<Import controller actions>>
+
+  instance FrontController WebApplication where
+      controllers =
+          [ <<Set ActivitiesAction as front page>>
+          -- Generator Marker
+          <<Parse controller routes>>
+          ]
+
+  instance InitControllerContext WebApplication where
+      initContext = do
+          setLayout defaultLayout
+          initAutoRefresh
+#+end_src
+- *mutkaistava toiminta*
 
 =ActivitiesAction= will then query all activities from the database and check if there's a newest activity to show.
 #+caption: Index Activities using IndexView
@@ -547,9 +620,9 @@ We'll have to set the =Action= that's triggered on loading =/=. This goes into t
         chartData = chartActivityData healthInfo (selectedActivity, laps, tps)
     render IndexView { .. }
 #+end_src
+- *mutkaistava toiminta*
 
 =IndexView= is going to render the web page for user's browser. It is dependent on a couple of defaults, namely the layout elements universal to any page we will be rendering, =defaultLayout=.
-
 #+caption: Web/View/Layout.hs
 #+begin_src haskell :tangle liikuntakirja/Web/View/Layout.hs
 
@@ -592,6 +665,7 @@ We'll have to set the =Action= that's triggered on loading =/=. This goes into t
       <<Meta tags>>
   |]
 #+end_src
+- *mutkaistava toiminta*
 
 =defaultLayout= uses a set of JavaScript libraries
 #+caption: JavaScript libraries
@@ -611,6 +685,7 @@ We'll have to set the =Action= that's triggered on loading =/=. This goes into t
   <script src={assetPath "/app.js"}></script>
   <<Import JavaScript libraries>>
 #+end_src
+- *mutkaistava toiminta*
 
 and a set of CSS stylesheets. Liikuntakirja uses the straightforward if bland Bootstrap stylesheet.
 #+caption: CSS stylesheets
@@ -619,6 +694,7 @@ and a set of CSS stylesheets. Liikuntakirja uses the straightforward if bland Bo
   <link rel="stylesheet" href={assetPath "/vendor/flatpickr.min.css"}/>
   <link rel="stylesheet" href={assetPath "/app.css"}/>
 #+end_src
+- *mutkaistava toiminta*
 
 Some =<meta>= tags too, you know, for '90s SEO or something.
 #+caption: Meta tags
@@ -631,6 +707,7 @@ Some =<meta>= tags too, you know, for '90s SEO or something.
   <meta property="og:description" content="TODO"/>
   {autoRefreshMeta}
 #+end_src
+- *mutkaistava toiminta*
 
 Finally the default HTML with views like =IndexView= embedded into =inner= element.
 #+caption: Default page layout
@@ -653,6 +730,7 @@ Finally the default HTML with views like =IndexView= embedded into =inner= eleme
       </body>
   </html>
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 =IndexView= then shows the main interface with the found activity and also catalogues all activities. IHP uses JSX-like HSX syntax. HSX enables embedding Haskell bindings inside page layouts. Since HSX contents are not Haskell, they have been abstracted away into separate code blocks.
 #+caption: Web/View/Activities/Index.hs
@@ -705,6 +783,7 @@ Finally the default HTML with views like =IndexView= embedded into =inner= eleme
         [ breadcrumbLink "Settings" EditHealthInformationAction
         ]
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 The unified interface is laid out using simple HTML and Bootstrap CSS classes.
 #+caption: Lay out the unified interface
@@ -746,18 +825,21 @@ The unified interface is laid out using simple HTML and Bootstrap CSS classes.
 #+begin_src html :noweb-ref Lay out navigation bar
   {links}
 #+end_src
+- *lopputulos*
 
 The unified interface can then be seen when loading =/Activities=
 #+begin_src sh :results file graphics :file "./visualizations/activities_visualization.png" :dir .
   <<Chromium binary>> <<Chromium options>> "http://localhost:8000/Activities"
   <<Post-process screenshot>> visualizations/activities_visualization.png
 #+end_src
-
+- *lopetus + arviointi*
 ** User edits their personal health information
+- *tiivistelmä*
 User wants to input age for physical stress analysis. For now, it is left to the user to adjust this when looking at older activities. In a future version, user could put in their birthday and each activity will be adjusted for it in respect to activity time.
-
+- *orientaatio*
 #+caption: UI mockup
 [[./assets/editview.png]]
+- *orientaatio*
 
 *** Propositions
 We'll make a dedicated tests file for handling personal health information. We'll call the base model for this information =HealthInformation=.
@@ -802,6 +884,7 @@ We'll make a dedicated tests file for handling personal health information. We'l
 
   <<Test HealthInformationsController>>
 #+end_src
+- *orientaatio + mutkaistava toiminta*
 
 First off, we need to model user's personal health information, namely age. User is not interested in calories burned or other weight/height-related information. There will ever only be one row in the table that is always inserted when setting up database. Program cannot run without the row.
 #+caption: Test HealthInformation model
@@ -818,6 +901,7 @@ First off, we need to model user's personal health information, namely age. User
 #+begin_src haskell :noweb-ref Call HealthInformation unit tests
   testModel
 #+end_src
+- *orientaatio + mutkaistava toiminta*
 
 The other thing we need is an Edit action which shows an editing view, and an Update action that updates database. We'll also have to agree on a default age for the user.
 #+caption: Test HealthInformationsController
@@ -843,6 +927,7 @@ The other thing we need is an Edit action which shows an editing view, and an Up
 #+begin_src haskell :noweb-ref Default user age
   30
 #+end_src
+- *mutkaistava toiminta*
 
 Lastly, we'll add this module to the main unit testing module
 #+caption: Unit test modules
@@ -853,6 +938,7 @@ Lastly, we'll add this module to the main unit testing module
 #+begin_src haskell :noweb-ref Unit test module functions
   Test.Controller.HealthInformationsSpec.tests
 #+end_src
+- *mutkaistava toiminta*
 
 *** Implementation
 Let's set up our model first. We need a very simple table with only one column, and an INSERT statement into the fixtures file. Technically we don't need =id=, but the IHP architecture expects it (and maybe we'll have e.g. multiple users in the future).
@@ -867,6 +953,7 @@ Let's set up our model first. We need a very simple table with only one column, 
 #+begin_src sql :noweb-ref Insert default HealthInformation row
   INSERT INTO health_informations (age) VALUES (<<Default user age>>);
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 With the model set, we'll set up the controller.
 #+caption: Web/Controller/HealthInformations.hs
@@ -913,6 +1000,7 @@ With the model set, we'll set up the controller.
 #+begin_src haskell :noweb-ref Parse controller routes
   , parseRoute @HealthInformationsController
 #+end_src
+- *mutkaistava toiminta*
 
 And finally the =EditView= the controller makes for manipulating the model.
 #+caption: Web/View/HealthInformations/Edit.hs
@@ -950,50 +1038,27 @@ And finally the =EditView= the controller makes for manipulating the model.
   {textField #age}
   {submitButton}
 #+end_src
+- *lopputulos*
 
 All HSpec tests should now be good:
 #+begin_src haskell
   :l Test/Main
   hspec $ Test.Controller.HealthInformationsSpec.tests
 #+end_src
-
-#+RESULTS:
-#+begin_example
-HealthInformationsController
-CREATE EXTENSION
-CREATE TYPE
-CREATE FUNCTION
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-  should start with one row [v]
-HealthInformations
-  models age [v]
-HealthInformationsController
-  calling EditHealthInformationAction renders an editing form [v]
-  calling UpdateHealthInformationAction updates HealthInformation [v]
-HealthInformationsController
-  should finish with one row [v]
-
-Finished in 0.8836 seconds
-5 examples, 0 failures
-#+end_example
+- *arviointi*
 
 The settings interface should look like the mockup in the user story:
 #+begin_src sh :results file graphics :file "./visualizations/editsettings_visualization.png" :dir .
   <<Chromium binary>> <<Chromium options>> "http://localhost:8000/EditHealthInformation"
   <<Post-process screenshot>> visualizations/editsettings_visualization.png
 #+end_src
-
-#+RESULTS:
-[[file:./visualizations/editsettings_visualization.png]]
-
+- *arviointi*
 
 ** User uploads smartwatch data into Liikuntakirja
+- *tiivistelmä*
 The user has TCX-formatted smartwatch data files on their computer, ready for uploading.
+- *orientaatio*
 *** Propositions
-
 Since parsing TCX files can be used in other programs too, we make it into a separate module with its own unit test suite.
 #+caption: Test/Application/TCXSpec.hs
 #+begin_src haskell :tangle liikuntakirja/Test/Application/TCXSpec.hs
@@ -1017,8 +1082,10 @@ Since parsing TCX files can be used in other programs too, we make it into a sep
 #+begin_src haskell :noweb-ref Unit test module functions
   Test.Application.TCXSpec.tests
 #+end_src
+- *orientaatio*
 
 We will have to parse the XML into a Haskell record form. As XML and Haskell records are structurally similar, while the database model has children pointing to parents instead of parents pointing to children, we're using an intermediate record type. The intermediate record also eases modularization and thus use of the parser in other contexts.
+- *orientaatio*
 
 Since the XML files and resulting records are big and not trivially referenced in string form in Haskell, we'll load them from respective files. We're happy with comparing both workout examples against a predefined =Show= instance results which too have been saved to separate files.
 #+caption: TCX to record unit test
@@ -1040,6 +1107,7 @@ Since the XML files and resulting records are big and not trivially referenced i
 #+begin_src haskell :noweb-ref TCX unit test calls
   tcxToRecord
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 In the second step we will map and insert the intermediate record into the database by  "inverting" the XML/record rose tree. This happens in =ActivitiesController=.
 #+caption: Test inserting a record provided by Application.TCX into database
@@ -1060,6 +1128,7 @@ In the second step we will map and insert the intermediate record into the datab
 #+begin_src haskell :noweb-ref ActivitiesSpec test function calls
   testTcxUpload
 #+end_src
+- *mutkaistava toiminta*
 
 *** Implementation
 To allow user uploads to =static/= directory, we'll have to import a configuration and some flags in =Config.hs= defined at Configure IHP
@@ -1071,6 +1140,7 @@ To allow user uploads to =static/= directory, we'll have to import a configurati
 #+begin_src haskell :noweb-ref Allow uploads
   initStaticDirStorage
 #+end_src
+- *mutkaistava toiminta*
 
 A simple file upload form is enough, everything in =Activity= can be derived from the uploaded TCX file.
 #+caption: Lay out Activity upload form
@@ -1078,6 +1148,7 @@ A simple file upload form is enough, everything in =Activity= can be derived fro
   {(fileField #uploadUrl) { required = True }}
   {submitButton}
 #+end_src
+- *mutkaistava toiminta*
 
 Once the user has browsed for a file and clicks "Upload", we will pass the uploaded TCX for conversion. The file arrives at the  =CreateActivityAction=. User will be redirected back to the front page after the file has been processed server-side. The TCX file is converted into an intermediate =TcxActivity= and finally to an =Activity= compatible with our model. An intermediate form is used as it is easier to parse XML into a rose tree-like record than a database-style inverted tree.
 #+caption: Create Activity from uploaded TCX
@@ -1088,6 +1159,7 @@ Once the user has browsed for a file and clicks "Upload", we will pass the uploa
     setSuccessMessage ("Activity uploaded!")
     redirectTo $ ShowActivityAction { .. }
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 The TCX file we've received is an XML-formatted file. In the file, Trackpoints are of most interest as it keeps track of heart rate, speed and time, but Lap and Activity have some useful metadata too. We have to expect that occasionally any other field than =Time= can be missing, as even heart rate might not be included in first couple Trackpoint nodes. An example TCX produced by a 5-second strength training workout.
 #+caption: Test/test.strength.tcx
@@ -1172,6 +1244,7 @@ The TCX file we've received is an XML-formatted file. In the file, Trackpoints a
   </Author>
 </TrainingCenterDatabase>
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 Another truncated example of a walking workout. Note that sport is "Other" regardless if it is strength training (previous case) or walking (this case). Superfluous and identical with previous case, Author and Creator parts were cut out in this case to save your eyes. In the walking workout there is a peculiar edge case: as the watch auto-laps every 1000.0m, the last Lap will both lack some fields like heart rate statistics and have zero calories and cadence. As with previous case and this case, the XML's have been cut out from larger XML files and are not 100% authentic and shouldn't be taken as complete gospel.
 #+caption: Test/test.walking.tcx
@@ -1281,6 +1354,7 @@ Another truncated example of a walking workout. Note that sport is "Other" regar
     </Activities>
   </TrainingCenterDatabase>
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 The following type structures are directly derived from thes two XML structures with uninteresting data pruned out. We end up with a tree structure going from Activity, to Lap, to Trackpoint. Intermediate types are prefixed by 'Tcx' to avoid collisions with IHP's database-derived types. =Activity='s intermediate type:
 #+caption: TcxActivity
@@ -1293,6 +1367,7 @@ The following type structures are directly derived from thes two XML structures 
     , tcxDeviceName :: Text
     } deriving (Eq, Show)
 #+end_src
+- *mutkaistava toiminta + arviointi*
 And the database schema for =Activity= derived from it:
 #+caption: Activity schema
 #+begin_src sql :noweb-ref Activity schema
@@ -1305,6 +1380,7 @@ And the database schema for =Activity= derived from it:
       upload_url TEXT NOT NULL
   );
 #+end_src
+- *mutkaistava toiminta*
 
 =Activities= consist of one or more =Laps=.
 #+caption: TcxLap
@@ -1340,6 +1416,7 @@ And the database schema for =Activity= derived from it:
       "trigger" TEXT NOT NULL
   );
 #+end_src
+- *mutkaistava toiminta*
 
 =Laps= in turn consist of tracks which are collections of =Trackpoints=. We will assume any extra tracks can be concatenated into one single track to simplify the data model.
 #+caption: TcxTrackpoint
@@ -1372,6 +1449,7 @@ And the database schema for =Activity= derived from it:
       sensor TEXT NOT NULL
   );
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 We collect these along with some descriptive aliases into types for the application.
 #+caption: Tcx types
@@ -1393,6 +1471,7 @@ We collect these along with some descriptive aliases into types for the applicat
   <<Lap schema>>
   <<Trackpoint schema>>
 #+end_src
+- *mutkaistava toiminta*
 
 With these types, the strength training TCX file should then parse into a structure like this.
 #+caption: Truncated strength training TCX XML parsed into a record
@@ -1471,17 +1550,20 @@ With these types, the strength training TCX file should then parse into a struct
     }
   ]
 #+end_src
+- *mutkaistava toiminta*
 
 =TcxActivity='s =Show= instance would then produce this for comparison test:
 #+caption: Test/test.strength.tcx.result
 #+begin_src haskell :tangle liikuntakirja/Test/test.strength.tcx.result
   [TcxActivity {tcxLaps = [TcxLap {tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:25.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Nothing, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:26.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Nothing, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:27.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Just 61, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:28.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Just 61, tcxCadence = Nothing, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-19 12:28:29.47 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Nothing, tcxTpDistance = Nothing, tcxTpHR = Just 61, tcxCadence = Nothing, tcxSensor = "Present"}], tcxLapStart = 2024-03-19 12:28:25.47 UTC, tcxLapTotal = 5.0, tcxLapDistance = 0.0, tcxMaxSpeed = Nothing, tcxCals = 1, tcxAvgHR = Just 61, tcxMaxHR = Just 61, tcxIntensity = "Active", tcxLapCadence = Nothing, tcxTrigger = "Manual"}], tcxSport = "Other", tcxActStart = 2024-03-19 12:28:24.47 UTC, tcxPlanType = "Workout", tcxDeviceName = "Polar INW3N_V2"}]
 #+end_src
+- *mutkaistava toiminta*
 Similarly, the walking workout should then produce this.
 #+caption: Test/test.walking.tcx.result
 #+begin_src haskell :tangle liikuntakirja/Test/test.walking.tcx.result
   [TcxActivity {tcxLaps = [TcxLap {tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-28 11:03:15.101 UTC, tcxLatitude = Just 61.44253, tcxLongitude = Just 23.852226, tcxAltitude = Just 158.193, tcxTpDistance = Just 0.0, tcxTpHR = Just 73, tcxCadence = Just 0, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-28 11:03:16.101 UTC, tcxLatitude = Just 61.44255, tcxLongitude = Just 23.85222, tcxAltitude = Just 158.193, tcxTpDistance = Just 0.0, tcxTpHR = Just 73, tcxCadence = Just 0, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-28 11:03:17.101 UTC, tcxLatitude = Just 61.442562, tcxLongitude = Just 23.852228, tcxAltitude = Just 158.193, tcxTpDistance = Just 0.0, tcxTpHR = Just 73, tcxCadence = Just 0, tcxSensor = "Present"}], tcxLapStart = 2024-03-28 11:03:15.101 UTC, tcxLapTotal = 2.0, tcxLapDistance = 3.7, tcxMaxSpeed = Just 1.831109, tcxCals = 3, tcxAvgHR = Just 73, tcxMaxHR = Just 73, tcxIntensity = "Active", tcxLapCadence = Just 51, tcxTrigger = "Distance"},TcxLap {tcxTrack = [TcxTrackpoint {tcxTpTime = 2024-03-28 11:52:28.854 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Just 161.089, tcxTpDistance = Just 3003.8, tcxTpHR = Just 106, tcxCadence = Just 55, tcxSensor = "Present"},TcxTrackpoint {tcxTpTime = 2024-03-28 11:52:29.854 UTC, tcxLatitude = Nothing, tcxLongitude = Nothing, tcxAltitude = Just 161.089, tcxTpDistance = Just 3005.1, tcxTpHR = Just 107, tcxCadence = Just 55, tcxSensor = "Present"}], tcxLapStart = 2024-03-28 11:52:28.854 UTC, tcxLapTotal = 2.585, tcxLapDistance = 3.4399903, tcxMaxSpeed = Nothing, tcxCals = 0, tcxAvgHR = Nothing, tcxMaxHR = Nothing, tcxIntensity = "Active", tcxLapCadence = Nothing, tcxTrigger = "Distance"}], tcxSport = "Other", tcxActStart = 2024-03-28 11:03:14.101 UTC, tcxPlanType = "Workout", tcxDeviceName = "Polar INW3N_V2"}]
 #+end_src
+- *mutkaistava toiminta*
 
 First we'll convert the uploaded XML into the =TcxActivity= record type. TCX files can theoretically have multiple =Activities=, but they are not expected in this case. Neither is graceful exception handling required due to threaded nature of IHP and the singular purpose of the upload request, so using =fromJust= as a shortcut is fine for now.
 #+caption: Convert uploaded TCX into TcxActivity
@@ -1495,6 +1577,7 @@ First we'll convert the uploaded XML into the =TcxActivity= record type. TCX fil
         |> head
         |> fromJust
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 The external functions used in these conversions. Using =fromJust= is fine in cases where we can expect XML to be correctly formed and in malformed cases the silent =error= is not an issue. The service will keep on running in these cases.
 #+caption: Import TCX conversion functions
@@ -1502,6 +1585,7 @@ The external functions used in these conversions. Using =fromJust= is fine in ca
   import Application.TCX (processTcxUpload)
   import Data.Maybe (fromJust)
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 Since there are no libraries available for directly extracting the TCX format, we'll construct a filter chain using =xml-conduit= (Text.XML and Text.XML.Cursor).
 #+caption: Haskell dependencies
@@ -1532,6 +1616,7 @@ xml-conduit
 
   <<The TCX inner works>>
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 There are two entry points to this TCX extractor: =processTcxFile= and =processTcxUpload=. Either approach would be fine with IHP's file uploading routine, but converting from =Text= rather than from =FilePath= inside =IO= monad is more straightforward. XML extractors like /Haskell XML Toolkit/ only work with files, so having =processTcxFile= is fulfilling idiomatic expectations, but also enables testing with larger files.
 #+caption: Key TCX functions
@@ -1545,6 +1630,7 @@ There are two entry points to this TCX extractor: =processTcxFile= and =processT
   processTcx :: TL.Text -> [TcxActivity]
   processTcx = getActivities . fromDocument . parseText_ def
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 Extracting the fields in this case is logically simple if repetitive and verbose. It could be cleaned up with some helper functions. =read= is used, but as before, graceful exception handling is not required here, although could be relatively easily added since the return value of =[TcxActivity]= is essentially a =Maybe= structure.
 #+caption: The TCX inner works
@@ -1601,12 +1687,13 @@ Extracting the fields in this case is logically simple if repetitive and verbose
   readTime :: Text -> UTCTime
   readTime = fromJust . formatParseM iso8601Format . T.unpack
 #+end_src
-
+- *mutkaistava toiminta + arviointi*
 Having put all this together, we can now convert a TCX file into a Haskell record structure:
 #+begin_src haskell
   :l Test/Main
   hspec $ Test.Application.TCXSpec.tcxToRecord
 #+end_src
+- *arviointi*
 
 Then we can do a type conversion similar to the one we did in when reading the XML: converting from the intermediate =TcxActivity= into the =Activity=  and others, which are then saved in the database via =createRecord= and its merged INSERT variation =createMany=. IHP will then be using =Activity=, =Lap= and =Trackpoint= in the views.
 #+caption: Convert TcxActivity into Activity and other database records
@@ -1648,25 +1735,26 @@ Then we can do a type conversion similar to the one we did in when reading the X
           ) lapIdsWithTracks
     return activity
 #+end_src
-
-#+begin_src haskell :results value replace
-  :l Test/Main
-  hspec $ Test.Application.Spec.tcxToRecord
-#+end_src
-
-These two conversions then come together and with the results saved into database with =createRecord= and =createMany= earlier, we can congratulate the user and show them the uploaded =Activity=.
-
+- *mutkaistava toiminta + arviointi*
 #+begin_src haskell :results value replace
   :l Test/Controller/ActivitiesSpec.hs
   hspec $ aroundAll (withIHPApp WebApplication config) $ Test.Controller.ActivitiesSpec.testTcxUpload
 #+end_src
-** User looks at an activity
-User opens the main view and either the newest activity or one they selected pops into their view. Details about their heart rate, heart rate zones, speed, and cadence along with total distance moved come into their view. Each new lap should be indicated in the graph. The graphs and info can be seen in [[interface mock-up][the united interface mock-up]].
-*** Propositions
+- *arviointi*
 
+These two conversions then come together and with the results saved into database with =createRecord= and =createMany= earlier, we can congratulate the user and show them the uploaded =Activity=.
+- *lopputulos + lopetus*
+
+** User looks at an activity
+- *tiivistelmä*
+User opens the main view and either the newest activity or one they selected pops into their view. Details about their heart rate, heart rate zones, speed, and cadence along with total distance moved come into their view. Each new lap should be indicated in the graph. The graphs and info can be seen in [[interface mock-up][the united interface mock-up]].
+- *orientaatio*
+*** Propositions
 In this part of the story, we'll have to consider how to visualize the data for the user, and how to get the data in a suitable form for proper visualization. We will use one chart for heart rate, its zones, speed and cadence, another smaller donut chart for visualizing the zones, and a small table for total distance, time, maybe calories and other tidbits in case the user suddenly comes up with new requirements
+- *orientaatio*
 
 The charts and table should look like in [[interface mock-up][the united interface mock-up]].
+- *mutkaistava toiminta*
 
 To fetch and sculpt the required data properly, these tests should pass.
 #+caption: Test/Controller/ActivitiesSpec.hs
@@ -1710,6 +1798,7 @@ To fetch and sculpt the required data properly, these tests should pass.
 #+begin_src haskell :noweb-ref ActivitiesSpec test function calls
   testChartData
 #+end_src
+- *mutkaistava toiminta*
 
 *** Implementation
 **** Plotting the activity
@@ -1718,6 +1807,7 @@ We'll be using an external =chart.js= library for plotting the data points. We'l
 #+begin_src html :noweb-ref Import JavaScript libraries
   <script src={assetPath "/chart.umd.min.js"}></script>
 #+end_src
+- *orientaatio*
 
 There are 5 different data types to chart over time. Ideally these would fit in a single chart. Heart rate and heart rate zones, speed and cadence, and laps are quite interrelated. We will get a set of labels (time), and matching datasets of the 5 data types. Let's start with the main plotting JavaScript script block. We'll fill in labels and dataset data later using another client-side block, we're now more concerned about how the data should be presented.
 #+caption: Plot selected activity
@@ -1763,6 +1853,7 @@ There are 5 different data types to chart over time. Ideally these would fit in 
   });
   </script>
 #+end_src
+- *orientaatio + mutkaistava toiminta + arviointi*
 
 To plot and scale heart rates, following structures should do:
 #+caption: Plot heart rate
@@ -1778,6 +1869,8 @@ To plot and scale heart rates, following structures should do:
     yAxisID: 'bpmY',
   }
 #+end_src
+- *mutkaistava toiminta*
+
 To visualize the user's descent into old age, we'll always keep the maximum heart rate scale at the theoretical 20yo's maximum of 200 BPM. A common maximum is needed to visualize differences between exercises.
 #+caption: Scale heart rate
 #+begin_src js :noweb-ref Scale heart rate
@@ -1794,6 +1887,7 @@ To visualize the user's descent into old age, we'll always keep the maximum hear
     }
   }
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 The heart rate zones require a bit of a different approach. Ideally we would paint Y axis partitioned into zones with respective colors, but straight lines delineating the zones should do also. We need to make 5 distinct zones.
 #+caption: Plot heart rate zones
@@ -1854,6 +1948,8 @@ The heart rate zones require a bit of a different approach. Ideally we would pai
     showLine: false
   }
 #+end_src
+- *mutkaistava toiminta + arviointi*
+
 To avoid littering the legends table, we will filter out the useless heart rate zone legends.
 #+caption: Filter out heart rate zone legends
 #+begin_src js :noweb-ref Filter out heart rate zone legends
@@ -1876,6 +1972,7 @@ To avoid littering the legends table, we will filter out the useless heart rate 
     }
   }
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 Speed is similar to heart rate, +but uses a different axis+ all use the same 0-200 axis for simplicity of a kind. 200 km/h or rpm seems like a sensible maximum for both speed and cadence to have them visually separate from heart rate and each other, but still be distinguishable even at around 5 km/h.
 #+caption: Plot speed
@@ -1891,6 +1988,7 @@ Speed is similar to heart rate, +but uses a different axis+ all use the same 0-2
     yAxisID: 'bpmY'
   }
 #+end_src
+- *mutkaistava toiminta + arviointi*
 The unused speed axis:
 #+caption: Scale speed
 #+begin_src js :noweb-ref Scale speed
@@ -1904,6 +2002,7 @@ The unused speed axis:
     }
   }
 #+end_src
+- *mutkaistava toiminta*
 
 Cadence goes in with speed.
 #+caption: Plot cadence
@@ -1919,6 +2018,7 @@ Cadence goes in with speed.
     yAxisID: 'bpmY'
   }
 #+end_src
+- *mutkaistava toiminta*
 
 Finally, laps will be (for now) implemented with simple dots using a scatter type. We'll make the dots appear on top of the heart rate dataset, as it is found on all activities.
 #+caption: Plot laps
@@ -1936,6 +2036,7 @@ Finally, laps will be (for now) implemented with simple dots using a scatter typ
     xAxisID: 'x'
   }
 #+end_src
+- *mutkaistava toiminta*
 
 Everything above then is shown as a function of time. It's obvious from labels what it is, so no separate title is required.
 #+caption: Scale time
@@ -1951,12 +2052,14 @@ Everything above then is shown as a function of time. It's obvious from labels w
     }
   }
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 This will then show up on a canvas.
 #+caption: Show plotted activity
 #+begin_src html :noweb-ref Show plotted activity
   <div style="position: relative;"><canvas id="activityChart"></canvas></div>
 #+end_src
+- *mutkaistava toiminta*
 
 We can then put it all together
 #+caption: Lay out selected activity
@@ -1964,8 +2067,10 @@ We can then put it all together
   <<Show plotted activity>>
   <<Plot selected activity>>
 #+end_src
+- *mutkaistava toiminta*
 
 Frontend will receive the data in a JSON parseable format. The chart is filled & updated with data clientside due to some quirks regarding the single-page nature of the frontend. Fully serverside, the chart would have trouble updating when moving between activities, even if the data-fields in <script> would update.
+- *orientaatio + mutkaistava toiminta + arviointi*
 
 IHP has a premade JS function that runs on every page load and as turbolinks change it:
 #+caption: static/app.js
@@ -1976,6 +2081,7 @@ IHP has a premade JS function that runs on every page load and as turbolinks cha
       // This is called on the first page load *and* also when the page is changed by turbolinks
   });
 #+end_src
+- *mutkaistava toiminta*
 
 We'll then update the chart:
 #+caption: Update chart
@@ -1995,16 +2101,20 @@ We'll then update the chart:
   aPChart.update('none');
   aPChart.resize();
 #+end_src
+- *mutkaistava toiminta*
 
 We should now have a graphical presentation of the data done.
 #+begin_src sh :results file graphics :file "./visualizations/ui_visualization.png" :dir .
   <<Chromium binary>> <<Chromium options>> "http://localhost:8000"
   <<Post-process screenshot>> visualizations/ui_visualization.png
 #+end_src
+- *arviointi*
 
 Next we'll transform the model data for the frontend.
+- *tiivistelmä*
 
 **** Sculpting the data
+- *orientaatio*
 
 We desperately need a type for the JSONified chart data
 #+caption: Type ChartData
@@ -2019,6 +2129,7 @@ We desperately need a type for the JSONified chart data
     , cdTotalTime :: Text
     }
 #+end_src
+- *mutkaistava toiminta*
 
 We can then start working on sculpting the data. We can assume that any sequential pair of Trackpoints  will have 1-second interval between them. Since Haskell lists will read as JSON and the coordinate JSON is easy to roll by hand, we can avoid using external JSON libraries. We'll start off with heart rate. All integers will turn into floats during sculpting. The resulting data will have each list item represent a 10 second period. =heartRate= is used in calculating lap indicators, so we'll =show= it when constructing =ChartData=.
 #+caption: Sculpt Activity into ChartData
@@ -2035,6 +2146,7 @@ We can then start working on sculpting the data. We can assume that any sequenti
 
   <<avgOver10s>>
 #+end_src
+- *mutkaistava toiminta + orientaatio + arviointi*
 
 Average over 10 seconds, but last average might average over only 1-9 seconds.
 #+caption: avgOver10s
@@ -2046,6 +2158,7 @@ Average over 10 seconds, but last average might average over only 1-9 seconds.
        then average (take 10 x) : avgOver10s (drop 10 x)
        else average x : []
 #+end_src
+- *mutkaistava toiminta*
 
 Then we'll work on heart rate zones. They have a simple spread based on deciles and a general rule on maximum heart rate being 220 minus your age BPM. As the zones are drawn as overlapping blocks, we'll start the 90% zone at 100%, 80% at 90%, etc.
 #+caption: Sculpt Activity into ChartData zones
@@ -2057,6 +2170,7 @@ Then we'll work on heart rate zones. They have a simple spread based on deciles 
                         show . replicate (length heartRate) . round $ topHeartRate * 0.9,
                         show . replicate (length heartRate) . round $ topHeartRate * 1.0)
 #+end_src
+- *mutkaistava toiminta*
 
 Speed requires some differential calculations. Cadence not so much.
 #+caption: Sculpt Activity into ChartData speed and cadence
@@ -2064,7 +2178,6 @@ Speed requires some differential calculations. Cadence not so much.
       speed = show . avgOver10s . deriveKmhSpeedFromDistance $ concat tps
       cadence = show . avgOver10s $ map (\tp -> fromIntegral $ fromMaybe 0 tp.cadence) . concat $ tps
 #+end_src
-
 #+caption: deriveKmhSpeedFromDistance
 #+begin_src haskell :noweb-ref deriveKmhSpeedFromDistance
   deriveKmhSpeedFromDistance :: [Trackpoint] -> [Float]
@@ -2075,14 +2188,15 @@ Speed requires some differential calculations. Cadence not so much.
         ((fromJust (pointDistance tp2) - dist1) * 3.6) : deriveKmhSpeedFromDistance (tp2:tps)
       Nothing ->
         0.0 : deriveKmhSpeedFromDistance (tp2:tps)
-
 #+end_src
+- *mutkaistava toiminta*
 
 Now, laps, time, and total time will require dealing with =Data.Time=. We will have to calculate =NominalDiffTimes= from =UTCTimes= and put them on the chart.
 #+caption: Import Data.Time for sculpting ChartData
 #+begin_src haskell :noweb-ref Import Data.Time for sculpting ChartData
   import Data.Time.Clock (diffUTCTime, nominalDiffTimeToSeconds)
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 With laps we need label for X axis and heart rate as of new lap for Y. X coordinate is the difference between activity and lap starts in seconds divided by 5 & nicely formatted. We get the label from =time= we're handling next. Y coordinate is current heart rate at that time. We don't need to know when the first lap started. We also need a more complex JSON than what the Show typeclass produces.
 #+caption: Sculpt Activity into ChartData laps
@@ -2092,6 +2206,7 @@ With laps we need label for X axis and heart rate as of new lap for Y. X coordin
             map (\lap -> "{\"x\":\"" ++ unpack (time !! (lapXCoordinate lap)) ++
                          "\", \"y\":" ++ unpack (show (heartRate !! (lapXCoordinate lap))) ++ "}") laps
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 Time is then time.. averaged over 10 seconds (4.5, 14.5, .. as first trackpoint is at 0 seconds) But we'll cheat a bit and =floor= + remove 4 seconds from, so the chart starts at 00.00 with some nice formatting. =time= is used for =totalTime=, so it's =show='d in the constructor.
 #+caption: Sculpt Activity into ChartData time
@@ -2101,6 +2216,7 @@ Time is then time.. averaged over 10 seconds (4.5, 14.5, .. as first trackpoint 
                        ++ zeroPad (show (t `mod` 60))) $ map (\t -> floor t - 4) $ avgOver10s [0.0..(fromIntegral (length (concat tps) - 1))]
   --time = map (\t -> floor t - 2) $ avgOver5s [0.0..(fromIntegral (length (concat tps) - 1))]
 #+end_src
+- *mutkaistava toiminta + arviointi*
 
 Total time is just the length of the X axis in this case.
 #+caption: Sculpt Activity into ChartData end
@@ -2110,6 +2226,7 @@ Total time is just the length of the X axis in this case.
   where
     <<deriveKmhSpeedFromDistance>>
 #+end_src
+- *mutkaistava toiminta*
 
 The data for sculpting is then fetched from the database.
 #+caption: Query Activity and its children
@@ -2131,6 +2248,7 @@ The data for sculpting is then fetched from the database.
                     ) laps
         return (Just activity, laps, tps)
 #+end_src
+- *mutkaistava toiminta*
 
 Everything in the backend is pulled together in =ShowActivityAction=
 #+caption: Show an activity
@@ -2148,15 +2266,17 @@ Everything in the backend is pulled together in =ShowActivityAction=
             chartData = chartActivityData healthInfo (selectedActivity, laps, tps)
         render IndexView { .. }
 #+end_src
+- *lopputulos*
 
 All propositions should now pass.
 #+begin_src haskell
   :l Test/Controller/ActivitiesSpec.hs
   hspec $ aroundAll (withIHPApp WebApplication config) $ testChartData
 #+end_src
-
+- *arviointi + lopetus*
 
 ** User deletes an activity
+*- tiivistelmä + orientaatio*
 User has clicked delete button and confirmed deletion. Activity and its constituents will be removed from the database.
 #+caption: Delete an activity
 #+begin_src haskell :noweb-ref Delete an activity
@@ -2173,7 +2293,7 @@ User has clicked delete button and confirmed deletion. Activity and its constitu
           setSuccessMessage "Activity deleted"
           redirectTo ActivitiesAction
 #+end_src
-
+- *mutkaistava toiminta + lopputulos*
 * Boilerplate epilogue
 #+PROPERTY:header-args :dir ./liikuntakirja :mkdirp yes :exports code :noweb no-export :eval never-export
 
@@ -2214,30 +2334,6 @@ User has clicked delete button and confirmed deletion. Activity and its constitu
 
   -- Generator Marker
   <<Controller routing instances>>
-#+end_src
-
-#+caption: Web/FrontController.hs
-#+begin_src haskell :tangle liikuntakirja/Web/FrontController.hs
-  module Web.FrontController where
-
-  import IHP.RouterPrelude
-  import Web.Controller.Prelude
-  import Web.View.Layout (defaultLayout)
-
-  -- Controller Imports
-  <<Import controller actions>>
-
-  instance FrontController WebApplication where
-      controllers =
-          [ <<Set ActivitiesAction as front page>>
-          -- Generator Marker
-          <<Parse controller routes>>
-          ]
-
-  instance InitControllerContext WebApplication where
-      initContext = do
-          setLayout defaultLayout
-          initAutoRefresh
 #+end_src
 
 An SQL schema file is used to set up the database. Any further manipulation should be in the fixtures file below the schema, although fixtures don't get loaded in unit tests for some reason.
